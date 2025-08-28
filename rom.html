@@ -42,6 +42,7 @@
 
         label {
             margin-right: 15px;
+            display: block;
         }
 
         .wrap {
@@ -98,7 +99,7 @@
 
         .row {
             display: flex;
-            gap: 20px;
+            gap: 10px;
             /*align-items: center;*/
             flex-direction: column;
             align-items: stretch;
@@ -304,29 +305,31 @@
   document.getElementById('options').style.display === 'none' ? 'block' : 'none'">📋 Toggle Options</button>
             </div>
             <div id="options" style="margin-top: 6px; display: none">
+
                 <div class="row">
                     <div>
-                        <label for="templates"><b>Templates</b></label>
+                        <label for="templates"><b>Predefined Chart Templates</b></label>
                         <select id="templates">
                         </select>
-                        <div class="hint">Select a template to use template defaults</div>
+                        <div class="hint">Select a template to set a predefined Title and Chart Definition</div>
                     </div>
+
                     <div>
                         <label for="title"><b>Title</b></label>
                         <input id="title" type="text" value="Test" />
                     </div>
                     <div>
-                        <label for="axisLabels"><b>Axis labels</b></label>
-                        <select id="axisLabelDefaults"></select>
-                        <input id="axisLabels" type="text" />
-                        <div class="hint">Numbers use exact positions (as %). Non-numeric (e.g. A,B,C,😀) spread evenly
-                            from center (0) to edge (100).</div>
-                    </div>
-                    <div>
-                        <label for="data"><b>Data</b></label>
+                        <label for="data"><b>Chart Definition</b></label>
                         <div class="sub">Enter groups as Group=Item 1,Item 2,Item 3 etc. Put new groups on a new line.
                             Item's will appear in colour coordinated groups.</div>
                         <textarea id="data" spellcheck="false"></textarea>
+                    </div>
+                    <div style="border-top: 1px solid var(--muted); padding-top: 12px;">
+                        <label for="axisLabels"><b>Axis labels</b></label>
+                        <select id="axisLabelDefaults"></select>
+                        <input id="axisLabels" type="text" />
+                        <div class="hint">No labels will use an exact % instead. Numbers take a 0-100 accurate position. Text (e.g. A,B,C,😀) spread out evenly.
+                            from center (0) to edge (100).</div>
                     </div>
                     <div>
                         <label for="polygonStyle"><b>Grid style</b></label>
@@ -334,12 +337,12 @@
                             <option value="circle" selected>Concentric circles</option>
                             <option value="polygon">Concentric polygons</option>
                         </select>
-                        <div class="hint">Visual only. Values still map 0–100 radially.</div>
+                        <div class="hint">Visual only.</div>
                     </div>
                     <div>
                         <label><input type="checkbox" id="showValues" checked>Show labels on points</label>
                     </div>
-                    <div>
+                    <div style="border-top: 1px solid var(--muted); padding-top: 12px;">
                         <label for="shareChart"><b>Share Chart</b></label>
                         <button id="shareChart">
                             🔗 Share
