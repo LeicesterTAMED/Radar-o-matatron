@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -27,7 +28,8 @@
             --muted: #232938;
         }
 
-        html, body {
+        html,
+        body {
             height: 100%
         }
 
@@ -35,7 +37,7 @@
             margin: 0;
             font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif;
             color: var(--ink);
-            background: linear-gradient(180deg,#0b0c10,#0f1117 40%, #0b0c10);
+            background: linear-gradient(180deg, #0b0c10, #0f1117 40%, #0b0c10);
         }
 
         label {
@@ -56,7 +58,7 @@
             border: 1px solid var(--muted);
             border-radius: 12px;
             padding: 14px 14px;
-            box-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .04);
         }
 
         h1 {
@@ -72,7 +74,8 @@
             margin-bottom: 10px
         }
 
-        textarea, input[type="text"] {
+        textarea,
+        input[type="text"] {
             width: 100%;
             box-sizing: border-box;
             background: var(--bg);
@@ -99,9 +102,9 @@
             align-items: stretch;
         }
 
-            .row > * {
-                flex: 1
-            }
+        .row>* {
+            flex: 1
+        }
 
         .hint {
             font-size: 12px;
@@ -153,10 +156,10 @@
             margin: 6px 0
         }
 
-            .sliderRow label {
-                font-size: 13px;
-                color: var(--ink);
-            }
+        .sliderRow label {
+            font-size: 13px;
+            color: var(--ink);
+        }
 
         .valueBox {
             display: flex;
@@ -171,10 +174,10 @@
             padding: 2px 6px;
         }
 
-            .valueBox b {
-                color: var(--ink);
-                font-weight: 700
-            }
+        .valueBox b {
+            color: var(--ink);
+            font-weight: 700
+        }
 
         input[type="range"] {
             -webkit-appearance: none;
@@ -186,25 +189,25 @@
             outline: none;
         }
 
-            input[type="range"]::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 18px;
-                height: 18px;
-                background: #7aa2ff;
-                border: 2px solid white;
-                border-radius: 50%;
-                box-shadow: 0 1px 4px rgba(0,0,0,.6);
-            }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #7aa2ff;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+        }
 
-            input[type="range"]::-moz-range-thumb {
-                width: 18px;
-                height: 18px;
-                background: #7aa2ff;
-                border: 2px solid white;
-                border-radius: 50%;
-                box-shadow: 0 1px 4px rgba(0,0,0,.6);
-            }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #7aa2ff;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .6);
+        }
 
         .footerHint {
             font-size: 12px;
@@ -213,6 +216,7 @@
         }
     </style>
 </head>
+
 <body>
     <div id="toast" style="
       position: fixed;
@@ -261,32 +265,40 @@
             <div id="options" style="margin-top: 6px; display: none">
                 <div class="row">
                     <div>
-                        <label for="dataInput"><b>Data</b></label>
-                        <div class="sub">Enter groups as Group=Item1,Item2,Item With Spaces per line. Items are placed around the chart; groups get colored wedges.</div>
-                        <textarea id="dataInput" spellcheck="false">Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.
-    Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal
-    Control=Being#overwhelmed, Being given#a chance,Restraints, Hair
-    Physical Harm=Pain, Biting, Scratching, Pressure Points
-    Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks
-    Psychological=Degradation, Praise
-    Dangerous=Chokes and#Strangles, Breath Play</textarea>
+                        <label for="templates"><b>Templates</b></label>
+                        <select id="templates">
+                        </select>
+                        <div class="hint">Select a template to use template defaults</div>
                     </div>
                     <div>
                         <label for="title"><b>Title</b></label>
-                        <input id="title" type="text" value="Play Fighting#Receiving" />
+                        <input id="title" type="text" value="Test" />
                     </div>
                     <div>
                         <label for="axisLabels"><b>Axis labels</b></label>
                         <select id="axisLabelDefaults">
-                            <option value="">Select predefined...</option>
+                            <!-- <option value="">Select predefined...</option>
                             <option value="">None (uses % instead)</option>
                             <option value="😡,😭,😢,😕,😐,🙂,😁,😃,🤩">😡,😭,😢,😕,😐,🙂,😁,😃,🤩</option>
                             <option value="0,10,20,30,40,50,60,70,80,90,100">10s</option>
                             <option value="0,20,40,60,80,100">20s</option>
-                            <option value="0,50,100">50s</option>
+                            <option value="0,50,100">50s</option> -->
                         </select>
                         <input id="axisLabels" type="text" value="😡,😭,😢,😕,😐,🙂,😁,😃,🤩" />
-                        <div class="hint">Numbers use exact positions (as %). Non-numeric (e.g. A,B,C,😀) spread evenly from center (0) to edge (100).</div>
+                        <div class="hint">Numbers use exact positions (as %). Non-numeric (e.g. A,B,C,😀) spread evenly
+                            from center (0) to edge (100).</div>
+                    </div>
+                    <div>
+                        <label for="data"><b>Data</b></label>
+                        <div class="sub">Enter groups as Group=Item1,Item2,Item With Spaces per line. Items are placed
+                            around the chart; groups get colored wedges.</div>
+                        <textarea id="data" spellcheck="false">Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.
+Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal
+Control=Being#overwhelmed, Being given#a chance,Restraints, Hair
+Physical Harm=Pain, Biting, Scratching, Pressure Points
+Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks
+Psychological=Degradation, Praise
+Dangerous=Chokes and#Strangles, Breath Play</textarea>
                     </div>
                     <div>
                         <label for="polygonStyle"><b>Grid style</b></label>
@@ -321,6 +333,7 @@
 
             // Fonts
             const fontTitle = '36px system-ui, sans-serif';
+            const fontDate = '22px system-ui, sans-serif';
             const fontItemLabel = '20px system-ui, sans-serif';
             const fontLabelMeasurement = 'bold 24px sans-serif';
             const fontGroupLabel = '600 24px system-ui, sans-serif';
@@ -350,7 +363,7 @@
             let groupColors = new Map(); // group -> color
 
             const els = {
-                ta: $('#dataInput'),
+                ta: $('#data'),
                 title: $('#title'),
                 axis: $('#axisLabels'),
                 gridStyle: $('#gridStyle'),
@@ -730,7 +743,7 @@
                         ctx.fillStyle = rgba(groupColors.get(item.group), 0.95);
 
                         drawMultilineText(ctx, item.value, x, y, lineHeight);
-                       // ctx.fillText(it, x, y);
+                        // ctx.fillText(it, x, y);
                     });
                 }
 
@@ -787,7 +800,7 @@
                         // Flip upside-down labels for readability
                         if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2)
                             ctx.rotate(Math.PI);
-                    
+
                         ctx.textAlign = 'center';
 
                         ctx.fillStyle = rgba(groupColors.get(g.name), 0.95);
@@ -815,12 +828,24 @@
 
                 ctx.restore();
 
+                ctx.save();
                 ctx.font = fontTitle;
                 ctx.fillStyle = '#000000';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'top';
                 //ctx.fillText(els.title.value, 16, 16); //els.canvas.width / 2, 16);
                 drawMultilineText(ctx, els.title.value, 16, 16, 40);
+                ctx.restore();
+
+                ctx.font = fontDate;
+                ctx.fillStyle = '#000000';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+
+                const now = new Date();
+                const formatted = `${String(now.getDate()).padStart(2, '0')} ${now.toLocaleString('en-GB', { month: 'short' })} ${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                ctx.fillText(formatted, els.canvas.width - 16, els.canvas.height - 10); //els.canvas.width / 2, 16);
+
             }
 
             // --- Wiring
@@ -840,8 +865,25 @@
             window.addEventListener('resize', debounce(draw, 60), { passive: true });
             $('#showValues').addEventListener('change', draw);
 
+            const templates = document.getElementById('templates');
             const axisLabelDefaults = document.getElementById('axisLabelDefaults');
             const axisLabels = document.getElementById('axisLabels');
+
+            templates.addEventListener('change', () => {
+                const selectedValue = templates.value;
+
+                let dataItem = defaults.find(item => item.id === selectedValue)?.value;
+                if (!dataItem)
+                    dataItem = defaults.find(item => item.id === 'Default')?.value;
+
+                titleParam = dataItem.title;
+                dataParam = dataItem.data;
+
+                document.getElementById('title').value = titleParam;
+                document.getElementById('data').value = dataParam.replace(/;/g, '\n');
+
+                rebuildAll();
+            });
 
             axisLabelDefaults.addEventListener('change', () => {
                 const selectedValue = axisLabelDefaults.value;
@@ -883,8 +925,10 @@
                 setToast('✅ Image saved - check your downloads folder.');
             });
 
+            // Share chart link
+
             document.getElementById('shareChart').addEventListener('click', () => {
-                const axisText = document.getElementById('dataInput').value.trim();
+                const axisText = document.getElementById('data').value.trim();
                 const axisLabels = document.getElementById('axisLabels').value.trim();
                 const title = document.getElementById('title').value.trim();
 
@@ -899,7 +943,7 @@
                 // Build full URL
                 const baseUrl = window.location.origin + window.location.pathname;
                 const fullUrl = `${baseUrl}?title=${encodedTitle}&data=${encodedData}&axis=${encodedAxis}`;
-  
+
                 // Copy to clipboard
                 navigator.clipboard.writeText(fullUrl)
                     .then(() => setToast('✅ Link copied to clipboard!'))
@@ -909,55 +953,100 @@
                     });
             });
 
+            // Processing of parameters etc. after page loaded
             window.addEventListener('DOMContentLoaded', () => {
                 const params = new URLSearchParams(window.location.search);
-                const dataParam = params.get('data') || '';
-                const axisParam = params.get('axis') || '';
-                const titleParam = params.get('title') || '';
+                let dataParam = params.get('data') || '';     // default or overrides values if contains a =
+                let axisParam = params.get('axis') || '';     // axis id or overrides values if contains a ,
+                let titleParam = params.get('title') || '';
 
-                if (dataParam.length > 0)
-                // Replace semicolons with newlines for textarea
-                document.getElementById('dataInput').value = dataParam.replace(/;/g, '\n');
+                if (axisParam.length == 0)
+                    axisParam = 'EmojiSmiles'; // default if not specified
 
-                if (axisLabels.length > 0)
-                // Directly assign axis labels
+                // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
+                if (axisParam.includes(','))
+                    // axisLabels custom definition
                     document.getElementById('axisLabels').value = axisParam;
+                else
+                    document.getElementById('axisLabels').value = (defaultsAxisLabels.find(item => item.id === axisParam)?.value) || '';
 
-                if (titleParam.length > 0)
-                    document.getElementById('title').value = titleParam.replace(/#/g, '\n');
+                if (dataParam.length == 0)
+                    dataParam = 'Default'; // default if not specified
 
-                draw();
+                // If contains a = then its a custom definition, else we look it up
+                if (!dataParam.includes('=')) {
+                    let dataItem = defaults.find(item => item.id === dataParam)?.value;
+
+                    if (!dataItem)
+                        dataItem = defaults.find(item => item.id === 'Default')?.value;
+
+                    if (titleParam.length == 0)
+                        titleParam = dataItem.title;
+                    
+                    dataParam = dataItem.data;
+                }
+                dataParam = dataParam.replace(/;/g, '\n');
+                document.getElementById('title').value = titleParam;
+                document.getElementById('data').value = dataParam.replace(/;/g, '\n');
+
+                rebuildAll();
             });
-           
+
             // defaults
             const defaults = [
                 {
-                    id: 'Test',
+                    id: 'Default',
                     value: {
-                        Title: 'Test#Title',
-                        Data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair;Physical Harm=Pain, Biting, Scratching, Pressure Points;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
+                        title: 'Test#Title',
+                        data: 'Test Group=One, Two, Three'
                     }
                 },
                 {
-                    id: 'Test2',
+                    id: 'PF-G',
                     value: {
-                        Title: 'Test#Title2',
-                        Data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair;Physical Harm=Pain, Biting, Scratching, Pressure Points;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
+                        title: 'Play Fighting#Giving',
+                        data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair;Physical Harm=Pain, Biting, Scratching, Pressure Points;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
+                    }
+                },
+                {
+                    id: 'PF-R',
+                    value: {
+                        title: 'Play Fighting#Receiving',
+                        data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair;Physical Harm=Pain, Biting, Scratching, Pressure Points;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
                     }
                 }
-            ]
+            ];
 
             const defaultsAxisLabels = [
-                { id: 'None', value: '' },
-                { id: 'Emojis', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
-                { id: '10s', value: '0,10,20,30,40,50,60,70,80,90,100' },
-                { id: '20s', value: '0,20,40,60,80,100' },
-                { id: '50s', value: '0,50,100' }
-            ]
+                { id: 'None', description: '% values', value: '' },
+                { id: 'EmojiSmiles', description: 'Emoji Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
+                { id: '10s', description: '10s', value: '0,10,20,30,40,50,60,70,80,90,100' },
+                { id: '20s', description: '20s', value: '0,20,40,60,80,100' },
+                { id: '50s', description: '30s', value: '0,50,100' }
+            ];
+
+            // Populate drop downs
+            const templateDropdown = document.getElementById('templates');
+            defaults.forEach(({ id, value }) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = value.title.replace(/#/g, ' ');
+                templateDropdown.appendChild(option);
+            });
+
+            // Populate drop downs
+            const axisDropdown = document.getElementById('axisLabelDefaults');
+            defaultsAxisLabels.forEach(({ description, value }) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = description;
+                axisDropdown.appendChild(option);
+            });
 
             // init
-            rebuildAll();
+            //rebuildAll();
         })();
     </script>
 </body>
+
 </html>
