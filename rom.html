@@ -483,19 +483,26 @@
 
             // --- Canvas sizing
             function resizeCanvas() {
-                const cw = els.canvas.clientWidth || 600;
-                const ch = els.canvas.clientHeight || 600;
-                const ratio = dpr();
-                els.canvas.width = Math.round(cw * ratio);
-                els.canvas.height = Math.round(ch * ratio);
-                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+                const cw = 1024; //els.canvas.clientWidth || 600;
+                const ch = 1024; //els.canvas.clientHeight || 600;
+
+                els.canvas.width = cw;
+                els.canvas.height = ch;
+
+                //const dcw = els.canvas.clientWidth || 600;
+                //const dch = els.canvas.clientHeight || 600;
+
+                //const ratio = dpr();
+                //els.canvas.style.width = Math.round(cw * ratio);
+                //els.canvas.style.height = Math.round(ch * ratio);
+                //ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             }
 
             // --- Drawing
             function draw() {
                 resizeCanvas();
-                const w = els.canvas.clientWidth || 600;
-                const h = els.canvas.clientHeight || 600;
+                const w = els.canvas.width; //.clientWidth || 600;
+                const h = els.canvas.height; //clientHeight || 600;
 
                 // ctx.clearRect(0, 0, w, h);
                 ctx.fillStyle = 'white';
