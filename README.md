@@ -1,2 +1,2 @@
 # Radar-o-matatron
-Radar charts
+Radar charts with extra spice!
