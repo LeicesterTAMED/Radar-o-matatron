@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Radar-o-matatron</title>
+    <style>
+        /*        :root {
+            --bg: #0e0f12;
+            --panel: #151922;
+            --ink: #e7ecf3;
+            --ink-dim: #a8b1c2;
+            --accent: #4e79a7;
+            --grid: #2a3040;
+            --line: #41506b;
+            --muted: #232938;
+        }*/
+
+        :root {
+            --bg: #Ffe3d0;
+            --panel: white;
+            --ink: #070c03;
+            --ink-dim: #484142;
+            --accent: #4e79a7;
+            --grid: #2a3040;
+            --line: #41506b;
+            --muted: #232938;
+        }
+
+        html, body {
+            height: 100%
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif;
+            color: var(--ink);
+            background: linear-gradient(180deg,#0b0c10,#0f1117 40%, #0b0c10);
+        }
+
+        label {
+            margin-right: 15px;
+        }
+
+        .wrap {
+            max-width: 1200px;
+            margin: 24px auto;
+            padding: 0 16px;
+            display: grid;
+            gap: 16px;
+            /*grid-template-columns: 1.1fr 1.4fr;*/
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--muted);
+            border-radius: 12px;
+            padding: 14px 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 8px 0;
+            font-weight: 700;
+            letter-spacing: .2px
+        }
+
+        .sub {
+            color: var(--ink-dim);
+            font-size: 13px;
+            margin-bottom: 10px
+        }
+
+        textarea, input[type="text"] {
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--bg);
+            color: var(--ink);
+            border: 1px solid #222839;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font: inherit;
+            outline: none;
+            resize: vertical;
+        }
+
+        textarea {
+            min-height: 130px;
+            white-space: pre;
+            line-height: 1.35
+        }
+
+        .row {
+            display: flex;
+            gap: 20px;
+            /*align-items: center;*/
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+            .row > * {
+                flex: 1
+            }
+
+        .hint {
+            font-size: 12px;
+            color: var(--ink-dim)
+        }
+
+        .canvasWrap {
+            position: relative;
+            aspect-ratio: 1/1;
+            width: 100%;
+            background: #0f1320;
+            border: 1px solid var(--muted);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block
+        }
+
+        .controls {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            margin-top: 12px;
+        }
+
+        fieldset {
+            border: 1px solid var(--muted);
+            border-radius: 10px;
+            padding: 10px 10px 6px 10px;
+            min-width: 0;
+        }
+
+        legend {
+            padding: 0 8px;
+            color: #dfe7ff;
+            font-weight: 700;
+            letter-spacing: .2px
+        }
+
+        .sliderRow {
+            display: grid;
+            grid-template-columns: 1fr 90px;
+            gap: 10px;
+            align-items: center;
+            margin: 6px 0
+        }
+
+            .sliderRow label {
+                font-size: 13px;
+                color: var(--ink);
+            }
+
+        .valueBox {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--ink);
+            background: var(--bg);
+            border: 1px solid #20263a;
+            border-radius: 8px;
+            padding: 2px 6px;
+        }
+
+            .valueBox b {
+                color: var(--ink);
+                font-weight: 700
+            }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--bg);
+            border-radius: 999px;
+            outline: none;
+        }
+
+            input[type="range"]::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                appearance: none;
+                width: 18px;
+                height: 18px;
+                background: #7aa2ff;
+                border: 2px solid white;
+                border-radius: 50%;
+                box-shadow: 0 1px 4px rgba(0,0,0,.6);
+            }
+
+            input[type="range"]::-moz-range-thumb {
+                width: 18px;
+                height: 18px;
+                background: #7aa2ff;
+                border: 2px solid white;
+                border-radius: 50%;
+                box-shadow: 0 1px 4px rgba(0,0,0,.6);
+            }
+
+        .footerHint {
+            font-size: 12px;
+            color: var(--ink-dim);
+            margin-top: 6px
+        }
+    </style>
+</head>
+<body>
+    <div id="toast" style="
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      z-index: 9999;">
+    </div>
+
+    <div class="wrap">
+        <div class="panel">
+            <h1>Chart</h1>
+            <div class="canvasWrap">
+                <!-- Button Group -->
+                <div id="canvasButtons" style="
+                        position: absolute;
+                        top: 20px;
+                        right: 20px;
+                        display: flex;
+                        gap: 8px;
+                        z-index: 10;">
+
+                    <button id="copyBtn">📋 Copy to clipboard</button>
+                    <button id="saveBtn">💾 Save</button>
+                </div>
+
+
+                <canvas id="chart"></canvas>
+            </div>
+            <div id="controls" class="controls"></div>
+        </div>
+
+        <div class="panel">
+            <div class="row">
+                <button id="toggleOptions" onclick="document.getElementById('options').style.display = 
+  document.getElementById('options').style.display === 'none' ? 'block' : 'none'">📋 Toggle Options</button>
+            </div>
+            <div id="options" style="margin-top: 6px; display: none">
+                <div class="row">
+                    <div>
+                        <label for="dataInput"><b>Data</b></label>
+                        <div class="sub">Enter groups as Group=Item1,Item2,Item With Spaces per line. Items are placed around the chart; groups get colored wedges.</div>
+                        <textarea id="dataInput" spellcheck="false">Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.
+    Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal
+    Control=Being#overwhelmed, Being given#a chance,Restraints, Hair
+    Physical Harm=Pain, Biting, Scratching, Pressure Points
+    Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks
+    Psychological=Degradation, Praise
+    Dangerous=Chokes and#Strangles, Breath Play</textarea>
+                    </div>
+                    <div>
+                        <label for="title"><b>Title</b></label>
+                        <input id="title" type="text" value="Test#Title" />
+                    </div>
+                    <div>
+                        <label for="axisLabels"><b>Axis labels</b></label>
+                        <select id="axisLabelDefaults">
+                            <option value="">Select predefined...</option>
+                            <option value="">None (uses % instead)</option>
+                            <option value="😡,😭,😢,😕,😐,🙂,😁,😃,🤩">😡,😭,😢,😕,😐,🙂,😁,😃,🤩</option>
+                            <option value="0,10,20,30,40,50,60,70,80,90,100">10s</option>
+                            <option value="0,20,40,60,80,100">20s</option>
+                            <option value="0,50,100">50s</option>
+                        </select>
+                        <input id="axisLabels" type="text" value="😡,😭,😢,😕,😐,🙂,😁,😃,🤩" />
+                        <div class="hint">Numbers use exact positions (as %). Non-numeric (e.g. A,B,C,😀) spread evenly from center (0) to edge (100).</div>
+                    </div>
+                    <div>
+                        <label for="polygonStyle"><b>Grid style</b></label>
+                        <select id="gridStyle">
+                            <option value="circle" selected>Concentric circles</option>
+                            <option value="polygon">Concentric polygons</option>
+                        </select>
+                        <div class="hint">Visual only. Values still map 0–100 radially.</div>
+                    </div>
+                    <div>
+                        <label><input type="checkbox" id="showValues" checked>Show labels on points</label>
+                    </div>
+                    <div>
+                        <label for="shareChart"><b>Share Chart</b></label>
+                        <button id="shareChart">
+                            🔗 Share
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            // --- Utilities
+            const $ = sel => document.querySelector(sel);
+            const dpr = () => Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+            const debounce = (fn, ms = 200) => {
+                let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+            };
+
+            // Fonts
+            const fontTitle = '36px system-ui, sans-serif';
+            const fontItemLabel = '20px system-ui, sans-serif';
+            const fontLabelMeasurement = 'bold 24px sans-serif';
+            const fontGroupLabel = '600 24px system-ui, sans-serif';
+            const fontPointLabelIsNumeric = '24px sans-serif';
+            const fontPointLabelNoneNumeric = '48px sans-serif';
+            const fontAxisLabel = '16px system-ui, sans-serif';
+
+            // --- Colors
+            const basePalette = [
+                '#3f6aa5', '#f07f1a', '#e04345', '#65b1ac', '#469e3b',
+                '#ebc62b', '#a7649b', '#ff8c97', '#8a6248', '#a79a95'
+            ];
+            const hexToRgb = h => {
+                const m = h.replace('#', ''); const x = m.length === 3 ? m.split('').map(c => c + c).join('') : m;
+                const n = parseInt(x, 16); return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+            };
+            const rgba = (hex, a) => {
+                const { r, g, b } = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`;
+            };
+            const genHue = i => `hsl(${(i * 233) % 360} 60% 55%)`; // fallback beyond base palette
+
+            // --- State
+            let groups = []; // [{name, items:[...]}]
+            let items = [];  // flattened items
+            let itemAngles = []; // radians per item
+            let values = new Map(); // item -> 0..100
+            let groupColors = new Map(); // group -> color
+
+            const els = {
+                ta: $('#dataInput'),
+                title: $('#title'),
+                axis: $('#axisLabels'),
+                gridStyle: $('#gridStyle'),
+                canvas: $('#chart'),
+                controls: $('#controls'),
+            };
+            const ctx = els.canvas.getContext('2d');
+
+            function drawMultilineText(ctx, text, x, y, lineHeight) {
+                const lines = text.split('#'); // Handles \n and \r\n
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, x, y + i * lineHeight);
+                });
+            }
+
+
+            // --- Parsing
+            function parseData(input) {
+                const out = [];
+                const seenGroups = new Set();
+                input.split(/\r?\n/).forEach(line => {
+                    const raw = line.trim();
+                    if (!raw) return;
+                    const eq = raw.indexOf('=');
+                    if (eq === -1) return;
+                    const name = raw.slice(0, eq).trim();
+                    if (!name) return;
+                    if (seenGroups.has(name)) return;
+                    const right = raw.slice(eq + 1);
+                    const items = right
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean)
+                        .map(value => ({ value, group: name }));
+
+                    if (!items.length) return;
+                    seenGroups.add(name);
+                    out.push({ name, items });
+                });
+                return out;
+            }
+
+            function computeAngles() {
+                items = groups.flatMap(g => g.items);
+                const N = Math.max(1, items.length);
+                const step = (Math.PI * 2) / N;
+                const start = -Math.PI / 2; // top
+                itemAngles = items.map((_, i) => start + i * step);
+            }
+
+            function assignColors() {
+                groupColors.clear();
+                groups.forEach((g, i) => {
+                    const hex = basePalette[i] || genHue(i);
+                    groupColors.set(g.name, hex);
+                });
+            }
+
+            // --- Axis labels parsing
+            function parseAxisLabels(s) {
+                const tokens = s.split(',').map(t => t.trim()).filter(Boolean);
+                if (tokens.length === 0) return { labels: ['0', '20', '40', '60', '80', '100'], pos: [0, .2, .4, .6, .8, 1], allNumeric: true, customValues: false };
+                const nums = tokens.map(t => Number.isFinite(+t) ? +t : NaN);
+                const allNumeric = nums.every(n => Number.isFinite(n));
+                if (allNumeric) {
+                    const pos = nums.map(n => Math.max(0, Math.min(100, n)) / 100);
+                    return { labels: tokens, pos, allNumeric, customValues: true };
+                } else {
+                    const n = tokens.length;
+                    if (n === 1) return { labels: tokens, pos: [1] };
+                    const pos = tokens.map((_, i) => i / (n - 1));
+                    return { labels: tokens, pos, allNumeric, customValues: true };
+                }
+            }
+
+            // --- Controls
+            function buildControls() {
+                const old = new Map(values);
+                values.clear();
+                items.forEach(it => values.set(it, old.has(it) ? old.get(it) : 50));
+
+                els.controls.innerHTML = '';
+                groups.forEach(g => {
+                    const fs = document.createElement('fieldset');
+                    const legend = document.createElement('legend');
+                    legend.textContent = g.name;
+                    legend.style.color = groupColors.get(g.name);
+                    fs.appendChild(legend);
+
+                    g.items.forEach(it => {
+                        const row = document.createElement('div');
+                        row.className = 'sliderRow';
+
+                        const left = document.createElement('div');
+                        const lab = document.createElement('label');
+                        lab.textContent = it.value.replace(/#/g, ' ');
+                        left.appendChild(lab);
+
+                        const right = document.createElement('div');
+                        right.className = 'valueBox';
+                        const val = document.createElement('b');
+                        val.textContent = values.get(it.value);
+                        const unit = document.createElement('span');
+                        unit.textContent = '%';
+                        right.appendChild(val);
+                        right.appendChild(unit);
+
+                        const slider = document.createElement('input');
+                        slider.type = 'range';
+                        slider.min = '0';
+                        slider.max = '100';
+                        slider.value = String(values.get(it));
+                        slider.ariaLabel = `${it} value`;
+                        slider.addEventListener('input', () => {
+                            const v = +slider.value;
+                            values.set(it, v);
+                            val.textContent = v;
+                            draw();
+                        });
+
+                        left.appendChild(slider);
+                        row.appendChild(left);
+                        row.appendChild(right);
+                        fs.appendChild(row);
+                    });
+
+                    els.controls.appendChild(fs);
+                });
+            }
+
+            // --- Canvas sizing
+            function resizeCanvas() {
+                const cw = els.canvas.clientWidth || 600;
+                const ch = els.canvas.clientHeight || 600;
+                const ratio = dpr();
+                els.canvas.width = Math.round(cw * ratio);
+                els.canvas.height = Math.round(ch * ratio);
+                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            }
+
+            // --- Drawing
+            function draw() {
+                resizeCanvas();
+                const w = els.canvas.clientWidth || 600;
+                const h = els.canvas.clientHeight || 600;
+
+                // ctx.clearRect(0, 0, w, h);
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
+
+                // layout
+                const cx = w / 2, cy = h / 2;
+
+                // estimate margins for labels
+
+                // Set font before measuring
+                ctx.font = fontLabelMeasurement; // or dynamically set based on config
+
+                // Find longest strings
+                const longestItem = items.reduce((a, c) => c.value.length > a.length ? c : a, '');
+                const longestGroup = groups.reduce((a, c) => c.name.length > a.length ? c.name : a, '');
+
+                // Measure actual pixel width
+                const itemWidth = ctx.measureText(longestItem).width;
+                const groupWidth = ctx.measureText(longestGroup).width;
+
+                // Add some breathing space
+                const labelPad = Math.min(140, itemWidth + 30);
+                const groupPad = Math.min(170, groupWidth + 50);
+
+                // Calculate radius based on canvas size and label padding
+                const R = Math.max(40, Math.min(w, h) / 2 - Math.max(70, Math.min(labelPad, groupPad)));
+
+                const showVals = $('#showValues').checked;
+                const axis = parseAxisLabels(els.axis.value);
+
+                const showPolygonGrid = els.gridStyle.value === 'polygon';
+
+                // background
+                ctx.save();
+                ctx.translate(cx, cy);
+
+                // group wedges (background colors)
+                {
+                    let idx = 0;
+                    let offset = 0;
+                    const N = Math.max(1, items.length);
+                    const step = (Math.PI * 2) / N;
+                    const start = -Math.PI / 2;
+                    groups.forEach(g => {
+                        const count = g.items.length;
+                        if (count === 0) return;
+                        const a0 = start + offset * step - step / 2 * 0.65;
+                        const a1 = start + (offset + count - 1) * step + step / 2 * 0.65;
+                        const color = groupColors.get(g.name);
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.arc(0, 0, R, a0, a1, false);
+                        ctx.closePath();
+                        ctx.fillStyle = rgba(color, 0.14);
+                        ctx.fill();
+                        // subtle boundary arcs
+                        ctx.strokeStyle = rgba(color, 0.35);
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, R, a0, a0, false); // moveTo
+                        ctx.arc(0, 0, R, a0, a1, false);
+                        ctx.stroke();
+
+                        offset += count;
+                        idx++;
+                    });
+                }
+
+                // grid rings
+                {
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#2a3040';
+                    axis.pos.forEach((p, i) => {
+                        const r = p * R;
+                        if (r <= 0) return; // skip center
+                        if (showPolygonGrid && items.length >= 3) {
+                            ctx.beginPath();
+                            items.forEach((_, k) => {
+                                const a = itemAngles[k];
+                                const x = Math.cos(a) * r;
+                                const y = Math.sin(a) * r;
+                                if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                            });
+                            ctx.closePath();
+                            ctx.stroke();
+                        } else {
+                            ctx.beginPath();
+                            ctx.arc(0, 0, r, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                    });
+
+                    // // axis labels along +X
+                    // ctx.fillStyle = '#b9c2d6';
+                    // ctx.font = fontAxisLabel;
+
+                    // ctx.textAlign = 'left';
+                    // ctx.textBaseline = 'middle';
+                    // axis.pos.forEach((p, i) => {
+                    //     const r = p * R;
+                    //     const lbl = axis.labels[i] ?? '';
+                    //     const x = r + 6;
+                    //     const y = 0;
+                    //     if (r >= 0) ctx.fillText(String(lbl), x, y);
+                    // });
+
+                    // draw ring at outer edge
+                    ctx.beginPath();
+                    ctx.arc(0, 0, R, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#39425a';
+                    ctx.stroke();
+                }
+
+                // radial item separation lines (first pass, below data poly)
+                {
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = '#2f3a53';
+                    items.forEach((_, i) => {
+                        const a = itemAngles[i];
+                        const x = Math.cos(a) * R;
+                        const y = Math.sin(a) * R;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                    });
+                }
+
+                // data polygon
+                {
+                    if (items.length >= 2) {
+                        ctx.beginPath();
+                        items.forEach((it, i) => {
+                            const v = (values.get(it) ?? 0) / 100;
+                            const r = v * R;
+                            const a = itemAngles[i];
+                            const x = Math.cos(a) * r;
+                            const y = Math.sin(a) * r;
+                            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                        });
+                        ctx.closePath();
+
+                        const canvas = els.canvas;
+                        const cx = canvas.width / 2;
+                        const cy = canvas.height / 2;
+                        const innerRadius = 0;
+                        const outerRadius = Math.sqrt(cx * cx + cy * cy) * 0.5; // full diagonal reach
+
+                        const grad = ctx.createRadialGradient(cx, cy, innerRadius, cx, cy, outerRadius);
+                        grad.addColorStop(0, 'rgba(255, 0, 0, 0.48)');
+                        grad.addColorStop(1, 'rgba(0, 255, 0, 0.48)');
+
+                        ctx.save();                         // preserve current transform
+                        ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform to canvas space
+                        ctx.fillStyle = grad;
+                        ctx.fill();
+                        ctx.restore();
+
+                        ctx.strokeStyle = '#89a9ff';
+                        ctx.lineWidth = 2;
+                        ctx.lineJoin = 'round';
+                        ctx.stroke();
+
+                        ctx.font = axis.customValues
+                            ? fontPointLabelNoneNumeric
+                            : fontPointLabelIsNumeric;
+
+                        // vertices
+                        items.forEach((it, i) => {
+                            const v = (values.get(it) ?? 0) / 100;
+                            const r = v * R;
+                            const a = itemAngles[i];
+                            const x = Math.cos(a) * r;
+                            const y = Math.sin(a) * r;
+
+                            const val = values.get(it) ?? 50;
+
+                            ctx.beginPath();
+                            ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+                            ctx.fillStyle = '#cfe0ff';
+                            ctx.fill();
+
+                            // Points
+                            ctx.beginPath();
+                            ctx.arc(x, y, 5.5, 0, Math.PI * 2);
+                            ctx.strokeStyle = 'rgba(137,169,255,0.45)';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+
+                            // Labels
+                            if (showVals) {
+                                const label = axis.customValues
+                                    ? axis.labels[Math.round(val / 100 * (axis.labels.length - 1))]
+                                    : `${val}%`;
+
+                                ctx.fillStyle = '#000';
+                                //ctx.font = fontPointLabel;
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(label, x, y);
+                            }
+                        });
+                    }
+                }
+
+                // item labels (around edge)
+                {
+                    ctx.font = fontItemLabel;
+                    const fontSize = parseInt(ctx.font.match(/\d+/)[0], 10);
+                    const lineHeight = fontSize * 1.2;
+
+                    ctx.fillStyle = '#0f172f';
+                    items.forEach((item, i) => {
+                        const a = itemAngles[i];
+                        const r = R + 30;
+                        const x = Math.cos(a) * r;
+                        const y = Math.sin(a) * r;
+                        const ca = Math.cos(a), sa = Math.sin(a);
+                        ctx.textBaseline = Math.abs(sa) < 0.3 ? 'middle' : (sa > 0 ? 'top' : 'bottom');
+                        if (ca > 0.25) ctx.textAlign = 'left';
+                        else if (ca < -0.25) ctx.textAlign = 'right';
+                        else ctx.textAlign = 'center';
+
+                        ctx.fillStyle = rgba(groupColors.get(item.group), 0.95);
+
+                        drawMultilineText(ctx, item.value, x, y, lineHeight);
+                       // ctx.fillText(it, x, y);
+                    });
+                }
+
+                //// group labels (further out, midpoint angle of each group)
+                //{
+                //    ctx.font = fontGroupLabel;
+                //    ctx.textBaseline = 'middle';
+                //    const N = Math.max(1, items.length);
+                //    const step = (Math.PI * 2) / N;
+                //    const start = -Math.PI / 2;
+                //    let offset = 0;
+                //    groups.forEach(g => {
+                //        const count = g.items.length;
+                //        if (!count) return;
+                //        const midIndex = offset + (count - 1) / 2;
+                //        const a = start + midIndex * step;
+                //        const r = R + 80;
+                //        const x = Math.cos(a) * r;
+                //        const y = Math.sin(a) * r;
+                //        const ca = Math.cos(a);
+                //        ctx.textAlign = Math.abs(ca) < 0.25 ? 'center' : (ca > 0 ? 'left' : 'right');
+                //        ctx.fillStyle = rgba(groupColors.get(g.name), 0.95);
+                //        ctx.fillText(g.name, x, y);
+                //        offset += count;
+                //    });
+                //}
+
+                // group labels (angled flat along the circle)
+                {
+                    ctx.font = fontGroupLabel;
+                    ctx.textBaseline = 'middle';
+                    const N = Math.max(1, items.length);
+                    const step = (Math.PI * 2) / N;
+                    const start = -Math.PI / 2;
+                    let offset = 0;
+
+                    groups.forEach(g => {
+                        const count = g.items.length;
+                        if (!count) return;
+
+                        const midIndex = offset + (count - 1) / 2;
+                        const a = start + midIndex * step;
+                        const r = R + 110;
+                        const x = Math.cos(a) * r;
+                        const y = Math.sin(a) * r;
+
+                        ctx.save();
+                        ctx.translate(x, y);
+
+                        // Rotate flat along the arc (tangential)
+                        const tangentAngle = a + Math.PI / 2;
+                        ctx.rotate(tangentAngle);
+
+                        // Flip upside-down labels for readability
+                        if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2)
+                            ctx.rotate(Math.PI);
+                    
+                        ctx.textAlign = 'center';
+
+                        ctx.fillStyle = rgba(groupColors.get(g.name), 0.95);
+                        ctx.fillText(g.name, 0, 0);
+                        ctx.restore();
+
+                        offset += count;
+                    });
+                }
+
+                // radial item separation lines (top pass to ensure always visible)
+                {
+                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+                    items.forEach((_, i) => {
+                        const a = itemAngles[i];
+                        const x = Math.cos(a) * R;
+                        const y = Math.sin(a) * R;
+                        ctx.beginPath();
+                        ctx.moveTo(0, 0);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                    });
+                }
+
+                ctx.restore();
+
+                ctx.font = fontTitle;
+                ctx.fillStyle = '#000000';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                //ctx.fillText(els.title.value, 16, 16); //els.canvas.width / 2, 16);
+                drawMultilineText(ctx, els.title.value, 16, 16, 40);
+            }
+
+            // --- Wiring
+            function rebuildAll() {
+                groups = parseData(els.ta.value);
+                computeAngles();
+                assignColors();
+                buildControls();
+                draw();
+            }
+
+            // events
+            els.ta.addEventListener('input', debounce(rebuildAll, 200));
+            els.axis.addEventListener('input', debounce(draw, 100));
+            els.title.addEventListener('input', debounce(draw, 100));
+            els.gridStyle.addEventListener('change', draw);
+            window.addEventListener('resize', debounce(draw, 60), { passive: true });
+            $('#showValues').addEventListener('change', draw);
+
+            const axisLabelDefaults = document.getElementById('axisLabelDefaults');
+            const axisLabels = document.getElementById('axisLabels');
+
+            axisLabelDefaults.addEventListener('change', () => {
+                const selectedValue = axisLabelDefaults.value;
+                axisLabels.value = selectedValue || ''; // fallback to empty string
+                draw();
+            });
+
+            function setToast(message, duration = 3000) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.style.opacity = '1';
+
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                }, duration);
+            }
+
+            // Copy to clipboard
+            document.getElementById('copyBtn').addEventListener('click', async () => {
+                try {
+                    const blob = await new Promise(resolve => els.canvas.toBlob(resolve, 'image/png'));
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    setToast('✅ Image copied to clipboard!');
+                } catch (err) {
+                    console.error('Clipboard copy failed:', err);
+                    setToast('⚠️ Copy to clipboard failed. Browser may not support this feature.');
+                }
+            });
+
+            // Save as PNG
+            document.getElementById('saveBtn').addEventListener('click', () => {
+                const link = document.createElement('a');
+                link.download = 'radar_chart.png';
+                link.href = els.canvas.toDataURL('image/png');
+                link.click();
+
+                setToast('✅ Image saved - check your downloads folder.');
+            });
+
+            document.getElementById('shareChart').addEventListener('click', () => {
+                const axisText = document.getElementById('dataInput').value.trim();
+                const axisLabels = document.getElementById('axisLabels').value.trim();
+                const title = document.getElementById('title').value.trim();
+
+                const encodedTitle = encodeURIComponent(title);
+
+                // Convert newlines to semicolons for Data param
+                const encodedData = encodeURIComponent(axisText.replace(/\n+/g, ';'));
+
+                // Axis labels stay comma-separated
+                const encodedAxis = encodeURIComponent(axisLabels);
+
+                // Build full URL
+                const baseUrl = window.location.origin + window.location.pathname;
+                const fullUrl = `${baseUrl}?title=${encodedTitle}&data=${encodedData}&axis=${encodedAxis}`;
+  
+                // Copy to clipboard
+                navigator.clipboard.writeText(fullUrl)
+                    .then(() => setToast('✅ Link copied to clipboard!'))
+                    .catch(err => {
+                        console.error('Copy failed:', err);
+                        setToast('⚠️ Failed to copy link.');
+                    });
+            });
+
+            window.addEventListener('DOMContentLoaded', () => {
+                const params = new URLSearchParams(window.location.search);
+                const dataParam = params.get('data') || '';
+                const axisParam = params.get('axis') || '';
+                const titleParam = params.get('title') || '';
+
+                if (dataParam.length > 0)
+                // Replace semicolons with newlines for textarea
+                document.getElementById('dataInput').value = dataParam.replace(/;/g, '\n');
+
+                if (axisLabels.length > 0)
+                // Directly assign axis labels
+                    document.getElementById('axisLabels').value = axisParam;
+
+                if (titleParam.length > 0)
+                    document.getElementById('title').value = titleParam.replace(/#/g, '\n');
+
+                draw();
+            });
+           
+            // defaults
+            const defaults = [
+                {
+                    id: 'Test',
+                    value: {
+                        Title: 'Test#Title',
+                        Data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair;Physical Harm=Pain, Biting, Scratching, Pressure Points;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
+                    }
+                },
+                {
+                    id: 'Test2',
+                    value: {
+                        Title: 'Test#Title2',
+                        Data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair;Physical Harm=Pain, Biting, Scratching, Pressure Points;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
+                    }
+                }
+            ]
+
+            const defaultsAxisLabels = [
+                { id: 'None', value: '' },
+                { id: 'Emojis', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
+                { id: '10s', value: '0,10,20,30,40,50,60,70,80,90,100' },
+                { id: '20s', value: '0,20,40,60,80,100' },
+                { id: '50s', value: '0,50,100' }
+            ]
+
+            // init
+            rebuildAll();
+        })();
+    </script>
+</body>
+</html>
