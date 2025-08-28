@@ -86,6 +86,8 @@
             font: inherit;
             outline: none;
             resize: vertical;
+            margin-top: 6px;
+            margin-bottom: 6px;
         }
 
         textarea {
@@ -217,8 +219,8 @@
 
         .angled-image {
             position: absolute;
-            margin-top: -15px;
-            margin-left: -15px;
+            margin-top: -30px;
+            margin-left: -20px;
             animation: swing 5s infinite ease-in-out;
             transform-origin: center;
             width: 100px;
@@ -226,13 +228,20 @@
             z-index: 999;
         }
 
-        
-    @keyframes swing {
-      0%   { transform: rotate(45deg); }
-      50%  { transform: rotate(-45deg); }
-      100% { transform: rotate(45deg); }
-    }
 
+        @keyframes swing {
+            0% {
+                transform: rotate(45deg);
+            }
+
+            50% {
+                transform: rotate(-45deg);
+            }
+
+            100% {
+                transform: rotate(45deg);
+            }
+        }
     </style>
 </head>
 
@@ -250,15 +259,15 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s ease;
-      z-index: 9999;">
+      z-index: 999;">
     </div>
 
-    <img src="Sock Goblin.png" alt="Decorative" class="angled-image">
+    <img id="SockGoblin" src="Sock Goblin.png" alt="Decorative" class="angled-image">
 
     <div class="wrap">
         <div class="panel">
-            <div style="text-align: center; font-size: 32px">Radar-o-Matatron</div>
-            <div style="text-align: center; font-size: 14px; font-style: italic;">The chart maker with an
+            <div style="text-align: center; font-size: 24px;">Radar-o-Matatron</div>
+            <div style="text-align: center; font-size: 10px; font-style: italic;">The chart maker with an
                 overcomplicated name!</div>
             <div class="canvasWrap" style="margin-top: 12px;">
                 <!-- Button Group -->
@@ -278,6 +287,15 @@
                 <canvas id="chart"></canvas>
             </div>
             <div id="controls" class="controls"></div>
+            <div style="margin-top: 12px;">
+                <div>
+                    <label for="messageTemplates" style=><b>Message</b></label>
+                    <select id="messageTemplates"></select>
+                </div>
+                <input id="messageStart" name="messageStart" type="text" autocomplete="on" />
+                <input id="messageCore" name="messageCore" type="text" autocomplete="on" />
+                <input id="messageEnd" name="messageEnd" type="text" autocomplete="on" />
+            </div>
         </div>
 
         <div class="panel">
@@ -344,6 +362,7 @@
             // Fonts
             const fontTitle = '36px system-ui, sans-serif';
             const fontDate = '22px system-ui, sans-serif';
+            const fontMessage = '22px system-ui, sans-serif';
             const fontItemLabel = '20px system-ui, sans-serif';
             const fontLabelMeasurement = 'bold 24px sans-serif';
             const fontGroupLabel = '600 24px system-ui, sans-serif';
@@ -379,14 +398,27 @@
                 gridStyle: $('#gridStyle'),
                 canvas: $('#chart'),
                 controls: $('#controls'),
+                messageStart: $('#messageStart'),
+                messageCore: $('#messageCore'),
+                messageEnd: $('#messageEnd')
             };
             const ctx = els.canvas.getContext('2d');
 
             function drawMultilineText(ctx, text, x, y, lineHeight) {
-                const lines = text.split('#'); // Handles \n and \r\n
+                const lines = text.split('#'); // Split into lines
                 lines.forEach((line, i) => {
                     ctx.fillText(line, x, y + i * lineHeight);
                 });
+            }
+
+            function drawMultilineTextUp(ctx, text, x, y, lineHeight) {
+                const lines = text.split('#'); // Split into lines
+                const totalHeight = (lines.length - 1) * lineHeight;
+
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, x, y - totalHeight + i * lineHeight);
+                });
+
             }
 
 
@@ -558,6 +590,12 @@
                 const axis = parseAxisLabels(els.axis.value);
 
                 const showPolygonGrid = els.gridStyle.value === 'polygon';
+
+                ctx.save();
+                const img = document.getElementById('SockGoblin');
+                const scale = 150 / img.naturalWidth;
+                const scaledHeight = img.naturalHeight * scale;
+                ctx.drawImage(img, els.canvas.width - 160, 10, 150, scaledHeight);
 
                 // background
                 ctx.save();
@@ -757,30 +795,6 @@
                     });
                 }
 
-                //// group labels (further out, midpoint angle of each group)
-                //{
-                //    ctx.font = fontGroupLabel;
-                //    ctx.textBaseline = 'middle';
-                //    const N = Math.max(1, items.length);
-                //    const step = (Math.PI * 2) / N;
-                //    const start = -Math.PI / 2;
-                //    let offset = 0;
-                //    groups.forEach(g => {
-                //        const count = g.items.length;
-                //        if (!count) return;
-                //        const midIndex = offset + (count - 1) / 2;
-                //        const a = start + midIndex * step;
-                //        const r = R + 80;
-                //        const x = Math.cos(a) * r;
-                //        const y = Math.sin(a) * r;
-                //        const ca = Math.cos(a);
-                //        ctx.textAlign = Math.abs(ca) < 0.25 ? 'center' : (ca > 0 ? 'left' : 'right');
-                //        ctx.fillStyle = rgba(groupColors.get(g.name), 0.95);
-                //        ctx.fillText(g.name, x, y);
-                //        offset += count;
-                //    });
-                //}
-
                 // group labels (angled flat along the circle)
                 {
                     ctx.font = fontGroupLabel;
@@ -847,6 +861,7 @@
                 drawMultilineText(ctx, els.title.value, 16, 16, 40);
                 ctx.restore();
 
+                ctx.save();
                 ctx.font = fontDate;
                 ctx.fillStyle = '#000000';
                 ctx.textAlign = 'right';
@@ -855,7 +870,31 @@
                 const now = new Date();
                 const formatted = `${String(now.getDate()).padStart(2, '0')} ${now.toLocaleString('en-GB', { month: 'short' })} ${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                 ctx.fillText(formatted, els.canvas.width - 16, els.canvas.height - 10); //els.canvas.width / 2, 16);
+                ctx.restore();
 
+                if (els.messageCore.value.length > 0) {
+                    let msg = els.messageCore.value.trim();
+
+                    const start = els.messageStart.value.trim();
+                    if (start.length > 0)
+                        msg = start + ' ' + msg;
+                    else
+                        msg = 'Someone ' + msg;
+
+                    const end = els.messageEnd.value.trim();
+                    if (end.length > 0)
+                        msg += ' ' + end;
+                    else
+                        msg += ' someone else';
+
+                    ctx.save();
+                    ctx.font = fontMessage;
+                    ctx.fillStyle = '#000000';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'bottom';
+                    drawMultilineTextUp(ctx, msg, 16, els.canvas.height - 10, 28);
+                    ctx.restore();
+                }
             }
 
             // --- Wiring
@@ -872,9 +911,14 @@
             els.axis.addEventListener('input', debounce(draw, 100));
             els.title.addEventListener('input', debounce(draw, 100));
             els.gridStyle.addEventListener('change', draw);
+            els.messageStart.addEventListener('input', debounce(draw, 100));
+            els.messageCore.addEventListener('input', debounce(draw, 100));
+            els.messageEnd.addEventListener('input', debounce(draw, 100));
+
             window.addEventListener('resize', debounce(draw, 60), { passive: true });
             $('#showValues').addEventListener('change', draw);
 
+            const messageTemplates = document.getElementById('messageTemplates');
             const templates = document.getElementById('templates');
             const axisLabelDefaults = document.getElementById('axisLabelDefaults');
             const axisLabels = document.getElementById('axisLabels');
@@ -900,6 +944,13 @@
                 axisLabels.value = selectedValue || ''; // fallback to empty string
                 draw();
             });
+
+            messageTemplates.addEventListener('change', () => {
+                const selectedValue = messageTemplates.value;
+                document.getElementById('messageCore').value = selectedValue || ''; // fallback to empty string
+                draw();
+            });
+
 
             function setToast(message, duration = 3000) {
                 const toast = document.getElementById('toast');
@@ -935,6 +986,12 @@
                 setToast('✅ Image saved - check your downloads folder.');
             });
 
+            // Redraw on image load (so appears in chart)
+            document.getElementById('SockGoblin').addEventListener('load', () => {
+                draw();
+            });
+
+
             // Share chart link
 
             document.getElementById('shareChart').addEventListener('click', () => {
@@ -969,13 +1026,15 @@
                 let dataParam = params.get('data') || '';     // default or overrides values if contains a =
                 let axisParam = params.get('axis') || '';     // axis id or overrides values if contains a ,
                 let titleParam = params.get('title') || '';
+                let messageStartParam = params.get('message-start') || '';
+                let messageCoreParam = params.get('message') || '';
+                let messageEndParam = params.get('message-end') || '';
 
                 if (axisParam.length == 0)
                     axisParam = 'EmojiSmiles'; // default if not specified
 
                 // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
                 if (axisParam.includes(','))
-                    // axisLabels custom definition
                     document.getElementById('axisLabels').value = axisParam;
                 else
                     document.getElementById('axisLabels').value = (defaultsAxisLabels.find(item => item.id === axisParam)?.value) || '';
@@ -998,6 +1057,31 @@
                 dataParam = dataParam.replace(/;/g, '\n');
                 document.getElementById('title').value = titleParam;
                 document.getElementById('data').value = dataParam.replace(/;/g, '\n');
+
+                // Any message with a space in is treated as a custom message, else we look it up
+                let msg;
+                if (messageCoreParam.includes(' '))
+                    msg = messageCoreParam;
+                else
+                    msg = (defaultMessages.find(item => item.id === messageCoreParam)?.value) || '';
+
+                document.getElementById('messageCore').value = msg;
+
+                let hasCoreMessage = msg.length > 0;
+
+                if (messageStartParam.length > 0)
+                    msg = messageStartParam;
+                else
+                    if (hasCoreMessage)
+                        msg = 'Person A';
+                document.getElementById('messageStart').value = msg;
+
+                if (messageEndParam.length > 0)
+                    msg = messageEndParam;
+                else
+                    if (hasCoreMessage)
+                        msg = 'Person B';
+                document.getElementById('messageEnd').value = msg;
 
                 rebuildAll();
             });
@@ -1035,6 +1119,13 @@
                 { id: '50s', description: '30s', value: '0,50,100' }
             ];
 
+            const defaultMessages = [
+                { id: 'None', value: '' },
+                { id: 'from', value: '#is happy to receive this#from' },
+                { id: 'to', value: '#is happy to do this#to' },
+                { id: 'with', value: '#is happy to do this#with' }
+            ];
+
             // Populate drop downs
             const templateDropdown = document.getElementById('templates');
             defaults.forEach(({ id, value }) => {
@@ -1044,7 +1135,6 @@
                 templateDropdown.appendChild(option);
             });
 
-            // Populate drop downs
             const axisDropdown = document.getElementById('axisLabelDefaults');
             defaultsAxisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
@@ -1053,6 +1143,14 @@
                 axisDropdown.appendChild(option);
             });
 
+            // Populate drop downs
+            const messageDropDown = document.getElementById('messageTemplates');
+            defaultMessages.forEach(({ id, value }) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value.replace(/#/g, ' ');
+                messageDropDown.appendChild(option);
+            });
             // init
             //rebuildAll();
         })();
