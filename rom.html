@@ -214,6 +214,25 @@
             color: var(--ink-dim);
             margin-top: 6px
         }
+
+        .angled-image {
+            position: absolute;
+            margin-top: -15px;
+            margin-left: -15px;
+            animation: swing 5s infinite ease-in-out;
+            transform-origin: center;
+            width: 100px;
+            height: auto;
+            z-index: 999;
+        }
+
+        
+    @keyframes swing {
+      0%   { transform: rotate(45deg); }
+      50%  { transform: rotate(-45deg); }
+      100% { transform: rotate(45deg); }
+    }
+
     </style>
 </head>
 
@@ -234,10 +253,14 @@
       z-index: 9999;">
     </div>
 
+    <img src="Sock Goblin.png" alt="Decorative" class="angled-image">
+
     <div class="wrap">
         <div class="panel">
-            <h1>Chart</h1>
-            <div class="canvasWrap">
+            <div style="text-align: center; font-size: 32px">Radar-o-Matatron</div>
+            <div style="text-align: center; font-size: 14px; font-style: italic;">The chart maker with an
+                overcomplicated name!</div>
+            <div class="canvasWrap" style="margin-top: 12px;">
                 <!-- Button Group -->
                 <div id="canvasButtons" style="
                         position: absolute;
@@ -276,29 +299,16 @@
                     </div>
                     <div>
                         <label for="axisLabels"><b>Axis labels</b></label>
-                        <select id="axisLabelDefaults">
-                            <!-- <option value="">Select predefined...</option>
-                            <option value="">None (uses % instead)</option>
-                            <option value="😡,😭,😢,😕,😐,🙂,😁,😃,🤩">😡,😭,😢,😕,😐,🙂,😁,😃,🤩</option>
-                            <option value="0,10,20,30,40,50,60,70,80,90,100">10s</option>
-                            <option value="0,20,40,60,80,100">20s</option>
-                            <option value="0,50,100">50s</option> -->
-                        </select>
-                        <input id="axisLabels" type="text" value="😡,😭,😢,😕,😐,🙂,😁,😃,🤩" />
+                        <select id="axisLabelDefaults"></select>
+                        <input id="axisLabels" type="text" />
                         <div class="hint">Numbers use exact positions (as %). Non-numeric (e.g. A,B,C,😀) spread evenly
                             from center (0) to edge (100).</div>
                     </div>
                     <div>
                         <label for="data"><b>Data</b></label>
-                        <div class="sub">Enter groups as Group=Item1,Item2,Item With Spaces per line. Items are placed
-                            around the chart; groups get colored wedges.</div>
-                        <textarea id="data" spellcheck="false">Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.
-Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal
-Control=Being#overwhelmed, Being given#a chance,Restraints, Hair
-Physical Harm=Pain, Biting, Scratching, Pressure Points
-Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks
-Psychological=Degradation, Praise
-Dangerous=Chokes and#Strangles, Breath Play</textarea>
+                        <div class="sub">Enter groups as Group=Item 1,Item 2,Item 3 etc. Put new groups on a new line.
+                            Item's will appear in colour coordinated groups.</div>
+                        <textarea id="data" spellcheck="false"></textarea>
                     </div>
                     <div>
                         <label for="polygonStyle"><b>Grid style</b></label>
@@ -982,7 +992,7 @@ Dangerous=Chokes and#Strangles, Breath Play</textarea>
 
                     if (titleParam.length == 0)
                         titleParam = dataItem.title;
-                    
+
                     dataParam = dataItem.data;
                 }
                 dataParam = dataParam.replace(/;/g, '\n');
