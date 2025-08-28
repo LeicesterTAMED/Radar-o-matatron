@@ -946,8 +946,15 @@
             });
 
             messageTemplates.addEventListener('change', () => {
-                const selectedValue = messageTemplates.value;
-                document.getElementById('messageCore').value = selectedValue || ''; // fallback to empty string
+                const msg = messageTemplates.value;
+                document.getElementById('messageCore').value = msg || ''; // fallback to empty string
+
+                if (els.messageStart.value.trim().length === 0 && msg.length > 0)
+                    els.messageStart.value = 'Person A';
+
+                if (els.messageEnd.value.trim().length === 0 && msg.length > 0)
+                    els.messageEnd.value = 'Person B';
+
                 draw();
             });
 
@@ -1122,7 +1129,7 @@
             const defaultMessages = [
                 { id: 'None', value: '' },
                 { id: 'from', value: '#is happy to receive this#from' },
-                { id: 'to', value: '#is happy to do this#to' },
+                { id: 'do', value: '#is happy to do this#to' },
                 { id: 'with', value: '#is happy to do this#with' }
             ];
 
