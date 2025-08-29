@@ -3,6 +3,7 @@
 <!-- Radar-o-Matatron -->
 <!-- v0.1.250829 -->
 <!-- (c) 2025 -->
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -278,21 +279,14 @@
             <div style="text-align: center; font-size: 24px;">Radar-o-Matatron</div>
             <div style="text-align: center; font-size: 10px; font-style: italic;">The chart maker with an
                 overcomplicated name!</div>
-            <div class="canvasWrap" style="margin-top: 12px;">
-                <!-- Button Group -->
-                <div id="canvasButtons" style="
-                        position: absolute;
-                        top: 20px;
-                        right: 20px;
-                        display: flex;
-                        gap: 8px;
-                        z-index: 10;">
-
-                    <button id="copyBtn">📋 Copy to clipboard</button>
-                    <button id="saveBtn">💾 Save</button>
-                </div>
-
-
+            <!-- Button Group -->
+            <div id="canvasButtons"
+                style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
+                <button id="copyBtn" style="white-space: nowrap;">📋 Copy to clipboard</button>
+                <button id="saveBtn" style="white-space: nowrap;">💾 Save image</button>
+                <button id="shareChart" style="white-space: nowrap;">🔗 Share new</button>
+            </div>
+            <div class="canvasWrap" style="margin-top: 10px;">
                 <canvas id="chartCanvas"></canvas>
             </div>
             <div id="controls" class="controls"></div>
@@ -317,7 +311,7 @@
 
                 <div class="row">
                     <div>
-                        <b>WARNING - changing options will reset your chart data!</b><br />
+                        <b>WARNING - changing options will reset your chart data!</b><br /><br />
                         Where you see # in any text, it is a placeholder where a new line will be inserted when
                         displayed on the chart. This can help with layout.
                     </div>
@@ -354,13 +348,11 @@
                         <div class="hint">Visual only.</div>
                     </div>
                     <div>
-                        <label><input type="checkbox" id="showValues" checked>Show labels on points</label>
-                    </div>
-                    <div style="border-top: 1px solid var(--muted); padding-top: 12px;">
-                        <label for="shareChart"><b>Share Chart</b></label>
-                        <button id="shareChart">
-                            🔗 Share
-                        </button>
+                        <label><input type="checkbox" id="rotateLabels" checked>Rotate labels around chart</label>
+                        <label><input type="checkbox" id="showValues" checked>Show values on points</label>
+                        <label><input type="checkbox" id="rotateValueLabels" checked>Rotate values around chart</label>
+                        <label><input type="checkbox" id="placeValueLabelsAtEdge" checked>Place the values around the
+                            edge</label>
                     </div>
                 </div>
             </div>
@@ -640,11 +632,11 @@
                 const labelsExtraRadius = 75;
                 const edgeLLabelsExtraRadius = 50;
 
-                const rotateValueLabels = true;
-                const edgeValueLabels = true;
-                const rotateLabels = true;
+                const rotateLabels = $('#rotateLabels').checked;
+                const showValues = $('#showValues').checked;
+                const rotateValueLabels = $('#rotateValueLabels').checked;
+                const edgeValueLabels = $('#placeValueLabelsAtEdge').checked;
 
-                const showVals = $('#showValues').checked;
                 //   const axis = parseAxisLabels(els.axis.value);
 
                 const showPolygonGrid = els.gridStyle.value === 'polygon';
@@ -827,7 +819,7 @@
 
 
                             // Labels
-                            if (showVals) {
+                            if (showValues) {
                                 let offset;
 
                                 offset = Math.round(val / 100 * (axis.labels.length - 1));
@@ -990,8 +982,8 @@
                 ctx.textBaseline = 'bottom';
 
                 const now = new Date();
-                const formatted = `${String(now.getDate()).padStart(2, '0')} ${now.toLocaleString('en-GB', { month: 'short' })} ${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                ctx.fillText(formatted, els.canvas.width - 16, els.canvas.height - 10); //els.canvas.width / 2, 16);
+                const formattedDate = `${String(now.getDate()).padStart(2, '0')} ${now.toLocaleString('en-GB', { month: 'short' })} ${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                ctx.fillText(formattedDate, els.canvas.width - 16, els.canvas.height - 10); //els.canvas.width / 2, 16);
                 ctx.restore();
 
                 if (els.messageCore.value.length > 0) {
@@ -1039,7 +1031,10 @@
             els.messageEnd.addEventListener('input', debounce(draw, 100));
 
             window.addEventListener('resize', debounce(draw, 60), { passive: true });
+            $('#rotateLabels').addEventListener('change', draw);
             $('#showValues').addEventListener('change', draw);
+            $('#rotateValueLabels').addEventListener('change', draw);
+            $('#placeValueLabelsAtEdge').addEventListener('change', draw);
 
             const messageTemplates = document.getElementById('messageTemplates');
             const templates = document.getElementById('templates');
@@ -1081,7 +1076,6 @@
                 draw();
             });
 
-
             function setToast(message, duration = 3000) {
                 const toast = document.getElementById('toast');
                 toast.textContent = message;
@@ -1108,8 +1102,11 @@
 
             // Save as PNG
             document.getElementById('saveBtn').addEventListener('click', () => {
+                const pad = n => String(n).padStart(2, '0');
+                const now = new Date();
+                const formattedDate = `${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}`;
                 const link = document.createElement('a');
-                link.download = 'radar_chart.png';
+                link.download = `radar_chart_${formattedDate}.png`;
                 link.href = els.canvas.toDataURL('image/png');
                 link.click();
 
@@ -1125,25 +1122,58 @@
             // Share chart link
 
             document.getElementById('shareChart').addEventListener('click', () => {
-                const axisText = document.getElementById('data').value.trim();
-                const axisLabels = document.getElementById('axisLabels').value.trim();
-                const title = document.getElementById('title').value.trim();
+                // Check if defaults have flattened variants of data
+                if (defaults[0].value.flattenedData === '')
+                    // Create a flattened version of data for when checking text below for link creation
+                    defaults.forEach(it => it.value.flattenedData = it.value.data.join(';'));
 
-                const encodedTitle = encodeURIComponent(title);
+                // Data combined into equivalent of single line with ; separators
+                let data = els.chartData.value.replace(/\n/g, ';');
 
-                // Convert newlines to semicolons for Data param
-                const encodedData = encodeURIComponent(axisText.replace(/\n+/g, ';'));
+                // Check to see if the axisText matches any of the defaults, if so use the id
+                // Reminder that even if someone selected text from a template, it's possible they modified it
+                let matchedDefault = defaults.find(item => item.value.flattenedData === data);
+                if (matchedDefault)
+                    data = matchedDefault.id;
+                // else leave data alone, the string contains the data definition
 
-                // Axis labels stay comma-separated
-                const encodedAxis = encodeURIComponent(axisLabels);
+                // Title is usually short, don't faff around with codes, just include the thing and helps with URL readability
+                //// Attempt to hunt down Title - the code is much smaller than the title probably is
+                //// matchedDefault = defaults.find(item => item.value.title === title);
+                //// if (matchedDefault)
+                ////     title = matchedDefault.id;
+
+                const encodedTitle = encodeURIComponent(els.title.value.trim());
+                const encodedData = encodeURIComponent(data); //).replace(/\n+/g, ';'));
+                const encodedAxis = encodeURIComponent(els.axisLabels.value.trim());
+                const encodedMessageStart = encodeURIComponent(els.messageStart.value.trim());
+                const encodedMessageCore = encodeURIComponent(els.messageCore.value.trim());
+                const encodedMessageEnd = encodeURIComponent(els.messageEnd.value.trim());
 
                 // Build full URL
                 const baseUrl = window.location.origin + window.location.pathname;
-                const fullUrl = `${baseUrl}?title=${encodedTitle}&data=${encodedData}&axis=${encodedAxis}`;
+
+                const params = [
+                    encodedTitle && `title=${encodedTitle}`,
+                    encodedData && `data=${encodedData}`,
+                    encodedAxis && `axis=${encodedAxis}`,
+                    encodedMessageStart && `start=${encodedMessageStart}`,
+                    encodedMessageCore && `message=${encodedMessageCore}`,
+                    encodedMessageEnd && `end=${encodedMessageEnd}`
+                ].filter(Boolean).join('&');
+
+                const fullUrl = `${baseUrl}${params ? '?' + params : ''}`;
+                console.log('Full URL:', fullUrl);
+                //const fullUrl = `${baseUrl}?title=${encodedTitle}&axis=${encodedAxis}&data=${encodedData}&message-start=${encodedMessageStart}&message=${encodedMessageCore}&message-end=${encodedMessageEnd}`;
+
+                let toastMessage;
+                if (fullUrl.length > 2000) {
+                    toastMessage = `⚠️ URL is ${fullUrl.length} characters long, which may be longer than some browsers allow (max 2000 characters). Consider simplifying data or title.`;
+                }
 
                 // Copy to clipboard
                 navigator.clipboard.writeText(fullUrl)
-                    .then(() => setToast('✅ Link copied to clipboard!'))
+                    .then(() => setToast(toastMessage ? toastMessage : '✅ Link copied to clipboard!'))
                     .catch(err => {
                         console.error('Copy failed:', err);
                         setToast('⚠️ Failed to copy link.');
@@ -1156,9 +1186,10 @@
                 let dataParam = params.get('data') || '';     // default or overrides values if contains a =
                 let axisParam = params.get('axis') || '';     // axis id or overrides values if contains a ,
                 let titleParam = params.get('title') || '';
-                let messageStartParam = params.get('message-start') || '';
+                let messageStartParam = params.get('start') || '';
                 let messageCoreParam = params.get('message') || '';
-                let messageEndParam = params.get('message-end') || '';
+                let messageEndParam = params.get('end') || '';
+                let dataItem;
 
                 // Axis
                 if (axisParam.length == 0) {
@@ -1173,6 +1204,14 @@
                     document.getElementById('axisLabels').value = (defaultsAxisLabels.find(item => item.id === axisParam)?.value) || '';
 
 
+                // Title
+                // If a default id exists for the title, we use that default, else we just keep as is
+                // if (titleParam.length > 0) {
+                //    dataItem = defaults.find(item => item.id === titleParam)?.value;
+                //     if (dataItem)
+                //         titleParam = dataItem.title;
+                // }
+
                 // Chart data
                 if (dataParam.length == 0)
                     dataParam = 'Default'; // default if not specified
@@ -1182,7 +1221,7 @@
                     dataParam = dataParam.replace(/;/g, '\n');
                 }
                 else {
-                    let dataItem = defaults.find(item => item.id === dataParam)?.value;
+                    dataItem = defaults.find(item => item.id === dataParam)?.value;
 
                     if (!dataItem)
                         dataItem = defaults.find(item => item.id === 'Default')?.value;
@@ -1222,6 +1261,8 @@
                         msg = 'Person B';
                 document.getElementById('messageEnd').value = msg;
 
+                items.forEach(it => values.set(it, old.has(it) ? old.get(it) : 50));
+
                 rebuildAll();
             });
 
@@ -1232,7 +1273,8 @@
                     value: {
                         title: 'Test#Title',
                         data: ['Test Group=One, Two, Three',
-                            'Another Group=A, B, C, D, E']
+                            'Another Group=A, B, C, D, E'],
+                        flattenedData: ''
                     }
                 },
                 {
@@ -1246,7 +1288,8 @@
                             'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
                             'Psychological=Degradation, Praise',
                             'Dangerous=Chokes and#Strangles, Breath Play'
-                        ]
+                        ],
+                        flattenedData: ''
                     }
                 },
                 {
@@ -1261,7 +1304,8 @@
                             'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
                             'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
                             'Misc.=Allergies, Lube'
-                        ]
+                        ],
+                        flattenedData: ''
                     }
                 },
                 {
@@ -1275,7 +1319,8 @@
                             'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior#Modification',
                             'Theatrics=Role Play, Scenes',
                             'Words=Dirty Talk, Verbal#Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
-                        ]
+                        ],
+                        flattenedData: ''
                     }
                 }
             ];
