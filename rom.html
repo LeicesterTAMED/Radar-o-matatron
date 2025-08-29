@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-
+<!-- Radar-o-Matatron -->
+<!-- v0.1.250829 -->
+<!-- (c) 2025 -->
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -811,8 +813,9 @@
                             const val = values.get(it) ?? 50;
 
                             ctx.beginPath();
-                            ctx.arc(x, y, 3.2, 0, Math.PI * 2);
-                            ctx.fillStyle = '#cfe0ff';
+                            ctx.arc(x, y, 5, 0, Math.PI * 2);
+                            const c = 255 * v;
+                            ctx.fillStyle = `rgba(${Math.round(224 * (v < 0.5 ? 1 : 2 * (1 - v)))},${Math.round(224 * (v < 0.5 ? 2 * v : 1))},0,1)`;
                             ctx.fill();
 
                             // Points
@@ -861,7 +864,7 @@
                     const fontSize = parseInt(ctx.font.match(/\d+/)[0], 10);
                     const lineHeight = fontSize * 1.2;
 
-                    ctx.fillStyle = '#0f172f';
+                    //ctx.fillStyle = '#0f172f';
                     items.forEach((item, i) => {
                         const a = itemAngles[i];
                         const r = chartRadius + labelsExtraRadius;
@@ -1253,7 +1256,7 @@
                         data: ['Sensory=Impact, Strokes, Tickles, Sensory#Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
                             'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative#Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
                             'Toys=Vibrators, Dildos, Butt Plus',
-                            'Restraint=Rope, Chains, Tape, Soft Cuffs, Metal Cuffs, Spreader Bars, Gags, Blindfolds, Hoods',
+                            'Restraint=Rope, Chains, Spreader Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
                             'Breath Play=Chocking, Strangling, Smothering, Hand over#Nose, Hand over#Mouth, Postural',
                             'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
                             'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
