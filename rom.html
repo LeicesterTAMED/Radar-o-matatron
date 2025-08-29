@@ -166,15 +166,21 @@
 
         .valueBox {
             display: flex;
+            /* justify-content: space-between; */
             align-items: center;
-            justify-content: space-between;
+            /* vertical centering */
+            justify-content: center;
+            /* horizontal centering */
+            vertical-align: middle;
+
             gap: 8px;
-            font-size: 12px;
+            font-size: 28px;
             color: var(--ink);
-            background: var(--bg);
-            border: 1px solid #20263a;
+            /* background: var(--bg); */
+            /* border: 1px solid #20263a; */
             border-radius: 8px;
-            padding: 2px 6px;
+            /* padding: 2px 6px; */
+            height: 100%;
         }
 
         .valueBox b {
@@ -285,7 +291,7 @@
                 </div>
 
 
-                <canvas id="chart"></canvas>
+                <canvas id="chartCanvas"></canvas>
             </div>
             <div id="controls" class="controls"></div>
             <div style="margin-top: 12px;">
@@ -301,12 +307,18 @@
 
         <div class="panel">
             <div class="row">
-                <button id="toggleOptions" onclick="document.getElementById('options').style.display = 
-  document.getElementById('options').style.display === 'none' ? 'block' : 'none'">📋 Toggle Options</button>
+                <button id="toggleOptions"
+                    onclick="document.getElementById('options').style.display = document.getElementById('options').style.display === 'none' ? 'block' : 'none'">
+                    ⚙️ Toggle Options</button>
             </div>
             <div id="options" style="margin-top: 6px; display: none">
 
                 <div class="row">
+                    <div>
+                        <b>WARNING - changing options will reset your chart data!</b><br />
+                        Where you see # in any text, it is a placeholder where a new line will be inserted when
+                        displayed on the chart. This can help with layout.
+                    </div>
                     <div>
                         <label for="templates"><b>Predefined Chart Templates</b></label>
                         <select id="templates">
@@ -328,8 +340,8 @@
                         <label for="axisLabels"><b>Axis labels</b></label>
                         <select id="axisLabelDefaults"></select>
                         <input id="axisLabels" type="text" />
-                        <div class="hint">No labels will use an exact % instead. Numbers take a 0-100 accurate position. Text (e.g. A,B,C,😀) spread out evenly.
-                            from center (0) to edge (100).</div>
+                        <div class="hint">Labels order from centre of chart to outside. If no labels specified, will use
+                            % instead.</div>
                     </div>
                     <div>
                         <label for="polygonStyle"><b>Grid style</b></label>
@@ -370,7 +382,7 @@
             const fontLabelMeasurement = 'bold 24px sans-serif';
             const fontGroupLabel = '600 24px system-ui, sans-serif';
             const fontPointLabelIsNumeric = '24px sans-serif';
-            const fontPointLabelNoneNumeric = '36px sans-serif';
+            const fontPointLabelNoneNumeric = '24px sans-serif';
             const fontAxisLabel = '16px system-ui, sans-serif';
 
             // --- Colors
@@ -393,13 +405,14 @@
             let itemAngles = []; // radians per item
             let values = new Map(); // item -> 0..100
             let groupColors = new Map(); // group -> color
+            let axis;
 
             const els = {
-                ta: $('#data'),
+                chartData: $('#data'),
                 title: $('#title'),
-                axis: $('#axisLabels'),
+                axisLabels: $('#axisLabels'),
                 gridStyle: $('#gridStyle'),
-                canvas: $('#chart'),
+                canvas: $('#chartCanvas'),
                 controls: $('#controls'),
                 messageStart: $('#messageStart'),
                 messageCore: $('#messageCore'),
@@ -424,6 +437,16 @@
 
             }
 
+            function drawMultilineTextCentered(ctx, text, x, y, lineHeight) {
+                const lines = text.split('#'); // Split into lines
+                const totalHeight = (lines.length - 1) * lineHeight;
+                const startY = y - totalHeight / 2;
+
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, x, startY + i * lineHeight);
+                });
+
+            }
 
             // --- Parsing
             function parseData(input) {
@@ -470,18 +493,31 @@
             // --- Axis labels parsing
             function parseAxisLabels(s) {
                 const tokens = s.split(',').map(t => t.trim()).filter(Boolean);
-                if (tokens.length === 0) return { labels: ['0', '20', '40', '60', '80', '100'], pos: [0, .2, .4, .6, .8, 1], allNumeric: true, customValues: false };
+
+                if (tokens.length === 0)
+                    return {
+                        labels: ['0', '20', '40', '60', '80', '100'],
+                        pos: [0, .2, .4, .6, .8, 1], allNumeric: true, customValues: false
+                    };
+
                 const nums = tokens.map(t => Number.isFinite(+t) ? +t : NaN);
                 const allNumeric = nums.every(n => Number.isFinite(n));
-                if (allNumeric) {
-                    const pos = nums.map(n => Math.max(0, Math.min(100, n)) / 100);
-                    return { labels: tokens, pos, allNumeric, customValues: true };
-                } else {
-                    const n = tokens.length;
-                    if (n === 1) return { labels: tokens, pos: [1] };
-                    const pos = tokens.map((_, i) => i / (n - 1));
-                    return { labels: tokens, pos, allNumeric, customValues: true };
-                }
+
+                // Originally had if was numeric then worked out variable width radial points
+                // however becomes messier when printing labels and less useful
+                // so did not finished - just treat everything including numbers as a label
+                //if (allNumeric) {
+                //    const pos = nums.map(n => Math.max(0, Math.min(100, n)) / 100);
+                //
+                //    return { labels: tokens, pos, allNumeric, customValues: true };
+                //} else {
+                const n = tokens.length;
+                if (n === 1)
+                    return { labels: ['', tokens[0]], pos: [0, 1], allNumeric: false, customValues: true };
+
+                const pos = tokens.map((_, i) => i / (n - 1));
+                return { labels: tokens, pos, allNumeric, customValues: true };
+                //}
             }
 
             // --- Controls
@@ -498,34 +534,44 @@
                     legend.style.color = groupColors.get(g.name);
                     fs.appendChild(legend);
 
-                    g.items.forEach(it => {
+                    g.items.forEach(item => {
                         const row = document.createElement('div');
                         row.className = 'sliderRow';
 
                         const left = document.createElement('div');
                         const lab = document.createElement('label');
-                        lab.textContent = it.value.replace(/#/g, ' ');
+                        lab.textContent = item.value.replace(/#/g, ' ');
                         left.appendChild(lab);
 
                         const right = document.createElement('div');
                         right.className = 'valueBox';
-                        const val = document.createElement('b');
-                        val.textContent = values.get(it.value);
-                        const unit = document.createElement('span');
-                        unit.textContent = '%';
-                        right.appendChild(val);
-                        right.appendChild(unit);
+                        const sliderValue = document.createElement('span');
+
+                        // --- Map slider value to axis label ---
+                        const val = String(values.get(item));
+                        const label = axis.customValues
+                            ? axis.labels[Math.round(val / 100 * (axis.labels.length - 1))]
+                            : `${val}%`;
+                        sliderValue.textContent = label;
+                        right.appendChild(sliderValue);
 
                         const slider = document.createElement('input');
                         slider.type = 'range';
                         slider.min = '0';
                         slider.max = '100';
-                        slider.value = String(values.get(it));
-                        slider.ariaLabel = `${it} value`;
+                        slider.value = String(values.get(item));
+                        slider.ariaLabel = `${item} value`;
+
                         slider.addEventListener('input', () => {
                             const v = +slider.value;
-                            values.set(it, v);
-                            val.textContent = v;
+                            values.set(item, v);
+
+                            // --- Map slider value to axis label ---
+                            const label = axis.customValues
+                                ? axis.labels[Math.round(v / 100 * (axis.labels.length - 1))]
+                                : `${v}%`;
+
+                            sliderValue.textContent = label;
                             draw();
                         });
 
@@ -585,12 +631,19 @@
                 // Add some breathing space
                 const labelPad = Math.min(140, itemWidth + 30);
                 const groupPad = Math.min(170, groupWidth + 50);
-
                 // Calculate radius based on canvas size and label padding
-                const R = Math.max(40, Math.min(w, h) / 2 - Math.max(70, Math.min(labelPad, groupPad)));
+                const chartScale = 2.15;
+                const chartRadius = Math.max(30, Math.min(w, h) / chartScale - Math.max(60, Math.min(labelPad, groupPad)));
+                const groupLabelsExtraRadius = 20;
+                const labelsExtraRadius = 75;
+                const edgeLLabelsExtraRadius = 50;
+
+                const rotateValueLabels = true;
+                const edgeValueLabels = true;
+                const rotateLabels = true;
 
                 const showVals = $('#showValues').checked;
-                const axis = parseAxisLabels(els.axis.value);
+                //   const axis = parseAxisLabels(els.axis.value);
 
                 const showPolygonGrid = els.gridStyle.value === 'polygon';
 
@@ -619,7 +672,7 @@
                         const color = groupColors.get(g.name);
                         ctx.beginPath();
                         ctx.moveTo(0, 0);
-                        ctx.arc(0, 0, R, a0, a1, false);
+                        ctx.arc(0, 0, chartRadius, a0, a1, false);
                         ctx.closePath();
                         ctx.fillStyle = rgba(color, 0.14);
                         ctx.fill();
@@ -627,8 +680,8 @@
                         ctx.strokeStyle = rgba(color, 0.35);
                         ctx.lineWidth = 1;
                         ctx.beginPath();
-                        ctx.arc(0, 0, R, a0, a0, false); // moveTo
-                        ctx.arc(0, 0, R, a0, a1, false);
+                        ctx.arc(0, 0, chartRadius, a0, a0, false); // moveTo
+                        ctx.arc(0, 0, chartRadius, a0, a1, false);
                         ctx.stroke();
 
                         offset += count;
@@ -641,7 +694,7 @@
                     ctx.lineWidth = 1;
                     ctx.strokeStyle = '#2a3040';
                     axis.pos.forEach((p, i) => {
-                        const r = p * R;
+                        const r = p * chartRadius;
                         if (r <= 0) return; // skip center
                         if (showPolygonGrid && items.length >= 3) {
                             ctx.beginPath();
@@ -676,7 +729,7 @@
 
                     // draw ring at outer edge
                     ctx.beginPath();
-                    ctx.arc(0, 0, R, 0, Math.PI * 2);
+                    ctx.arc(0, 0, chartRadius, 0, Math.PI * 2);
                     ctx.strokeStyle = '#39425a';
                     ctx.stroke();
                 }
@@ -684,11 +737,14 @@
                 // radial item separation lines (first pass, below data poly)
                 {
                     ctx.lineWidth = 1;
-                    ctx.strokeStyle = '#2f3a53';
-                    items.forEach((_, i) => {
+                    //ctx.strokeStyle = '#2f3a53';
+                    items.forEach((it, i) => {
                         const a = itemAngles[i];
-                        const x = Math.cos(a) * R;
-                        const y = Math.sin(a) * R;
+                        const x = Math.cos(a) * chartRadius;
+                        const y = Math.sin(a) * chartRadius;
+
+                        ctx.strokeStyle = rgba(groupColors.get(it.group), 0.95);
+
                         ctx.beginPath();
                         ctx.moveTo(0, 0);
                         ctx.lineTo(x, y);
@@ -702,7 +758,7 @@
                         ctx.beginPath();
                         items.forEach((it, i) => {
                             const v = (values.get(it) ?? 0) / 100;
-                            const r = v * R;
+                            const r = v * chartRadius;
                             const a = itemAngles[i];
                             const x = Math.cos(a) * r;
                             const y = Math.sin(a) * r;
@@ -738,10 +794,19 @@
                         // vertices
                         items.forEach((it, i) => {
                             const v = (values.get(it) ?? 0) / 100;
-                            const r = v * R;
+                            const r = v * chartRadius;
                             const a = itemAngles[i];
                             const x = Math.cos(a) * r;
                             const y = Math.sin(a) * r;
+
+                            let rLabel;
+                            if (edgeValueLabels)
+                                rLabel = chartRadius + edgeLLabelsExtraRadius;
+                            else
+                                rLabel = r;
+
+                            const xLabel = Math.cos(a) * rLabel;
+                            const yLabel = Math.sin(a) * rLabel;
 
                             const val = values.get(it) ?? 50;
 
@@ -757,17 +822,34 @@
                             ctx.lineWidth = 1;
                             ctx.stroke();
 
+
                             // Labels
                             if (showVals) {
+                                let offset;
+
+                                offset = Math.round(val / 100 * (axis.labels.length - 1));
+
                                 const label = axis.customValues
-                                    ? axis.labels[Math.round(val / 100 * (axis.labels.length - 1))]
+                                    ? axis.labels[offset]
                                     : `${val}%`;
 
                                 ctx.fillStyle = '#000';
-                                //ctx.font = fontPointLabel;
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
-                                ctx.fillText(label, x, y);
+
+                                if (rotateValueLabels) {
+                                    ctx.save();
+                                    ctx.translate(xLabel, yLabel);
+
+                                    // Rotate flat along the arc (tangential)
+                                    const tangentAngle = a + Math.PI / 2;
+                                    ctx.rotate(tangentAngle);
+                                    ctx.fillText(label, 0, 0);
+
+                                    ctx.restore();
+                                }
+                                else
+                                    ctx.fillText(label, xLabel, yLabel);
                             }
                         });
                     }
@@ -782,19 +864,49 @@
                     ctx.fillStyle = '#0f172f';
                     items.forEach((item, i) => {
                         const a = itemAngles[i];
-                        const r = R + 30;
+                        const r = chartRadius + labelsExtraRadius;
                         const x = Math.cos(a) * r;
                         const y = Math.sin(a) * r;
                         const ca = Math.cos(a), sa = Math.sin(a);
-                        ctx.textBaseline = Math.abs(sa) < 0.3 ? 'middle' : (sa > 0 ? 'top' : 'bottom');
-                        if (ca > 0.25) ctx.textAlign = 'left';
-                        else if (ca < -0.25) ctx.textAlign = 'right';
-                        else ctx.textAlign = 'center';
 
                         ctx.fillStyle = rgba(groupColors.get(item.group), 0.95);
 
-                        drawMultilineText(ctx, item.value, x, y, lineHeight);
-                        // ctx.fillText(it, x, y);
+                        if (rotateLabels) {
+                            // --- ROTATE VARIANT
+                            ctx.save();
+                            ctx.translate(x, y);
+
+                            // Rotate flat along the arc (tangential)
+                            const tangentAngle = a + Math.PI;
+                            ctx.rotate(tangentAngle);
+
+                            // Flip upside-down labels for readability
+                            let flipped = false;
+                            if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2) {
+                                ctx.rotate(Math.PI);
+                                flipped = true;
+                            }
+
+                            // Set alignment relative to rotated context
+                            ctx.textAlign = flipped ? 'left' : 'right';
+                            ctx.textBaseline = flipped ? 'middle' : 'middle';
+
+
+                            drawMultilineTextCentered(ctx, item.value, 0, 0, lineHeight);
+
+                            ctx.restore();
+                        }
+                        else {
+                            // NORMAL VARIANT
+                            ctx.textBaseline = Math.abs(sa) < 0.3 ? 'middle' : (sa > 0 ? 'top' : 'bottom');
+                            if (ca > 0.25) ctx.textAlign = 'left';
+                            else if (ca < -0.25) ctx.textAlign = 'right';
+                            else ctx.textAlign = 'center';
+
+                            drawMultilineText(ctx, item.value, x, y, lineHeight);
+
+                            // ctx.fillText(it, x, y);
+                        }
                     });
                 }
 
@@ -807,13 +919,16 @@
                     const start = -Math.PI / 2;
                     let offset = 0;
 
+                    ctx.strokeStyle = 'rgba(255,255,255,1)';
+                    ctx.lineWidth = 5;
+
                     groups.forEach(g => {
                         const count = g.items.length;
                         if (!count) return;
 
                         const midIndex = offset + (count - 1) / 2;
                         const a = start + midIndex * step;
-                        const r = R + 110;
+                        const r = chartRadius + groupLabelsExtraRadius;
                         const x = Math.cos(a) * r;
                         const y = Math.sin(a) * r;
 
@@ -831,6 +946,7 @@
                         ctx.textAlign = 'center';
 
                         ctx.fillStyle = rgba(groupColors.get(g.name), 0.95);
+                        ctx.strokeText(g.name, 0, 0);
                         ctx.fillText(g.name, 0, 0);
                         ctx.restore();
 
@@ -841,11 +957,11 @@
                 // radial item separation lines (top pass to ensure always visible)
                 {
                     ctx.lineWidth = 1;
-                    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+                    ctx.strokeStyle = 'rgba(0,0,0,0.10)';
                     items.forEach((_, i) => {
                         const a = itemAngles[i];
-                        const x = Math.cos(a) * R;
-                        const y = Math.sin(a) * R;
+                        const x = Math.cos(a) * chartRadius;
+                        const y = Math.sin(a) * chartRadius;
                         ctx.beginPath();
                         ctx.moveTo(0, 0);
                         ctx.lineTo(x, y);
@@ -902,16 +1018,17 @@
 
             // --- Wiring
             function rebuildAll() {
-                groups = parseData(els.ta.value);
+                groups = parseData(els.chartData.value);
                 computeAngles();
                 assignColors();
+                axis = parseAxisLabels(els.axisLabels.value);
                 buildControls();
                 draw();
             }
 
-            // events
-            els.ta.addEventListener('input', debounce(rebuildAll, 200));
-            els.axis.addEventListener('input', debounce(draw, 100));
+            // Events/EventListeners
+            els.chartData.addEventListener('input', debounce(rebuildAll, 200));
+            els.axisLabels.addEventListener('input', debounce(rebuildAll, 100));
             els.title.addEventListener('input', debounce(draw, 100));
             els.gridStyle.addEventListener('change', draw);
             els.messageStart.addEventListener('input', debounce(draw, 100));
@@ -934,10 +1051,10 @@
                     dataItem = defaults.find(item => item.id === 'Default')?.value;
 
                 titleParam = dataItem.title;
-                dataParam = dataItem.data;
+                dataParam = dataItem.data.map(line => line.trim()).join('\n');
 
                 document.getElementById('title').value = titleParam;
-                document.getElementById('data').value = dataParam.replace(/;/g, '\n');
+                document.getElementById('data').value = dataParam; //.replace(/;/g, '\n');
 
                 rebuildAll();
             });
@@ -945,7 +1062,7 @@
             axisLabelDefaults.addEventListener('change', () => {
                 const selectedValue = axisLabelDefaults.value;
                 axisLabels.value = selectedValue || ''; // fallback to empty string
-                draw();
+                rebuildAll();
             });
 
             messageTemplates.addEventListener('change', () => {
@@ -1040,8 +1157,11 @@
                 let messageCoreParam = params.get('message') || '';
                 let messageEndParam = params.get('message-end') || '';
 
-                if (axisParam.length == 0)
+                // Axis
+                if (axisParam.length == 0) {
                     axisParam = 'EmojiSmiles'; // default if not specified
+
+                }
 
                 // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
                 if (axisParam.includes(','))
@@ -1049,11 +1169,16 @@
                 else
                     document.getElementById('axisLabels').value = (defaultsAxisLabels.find(item => item.id === axisParam)?.value) || '';
 
+
+                // Chart data
                 if (dataParam.length == 0)
                     dataParam = 'Default'; // default if not specified
 
-                // If contains a = then its a custom definition, else we look it up
-                if (!dataParam.includes('=')) {
+                // If contains a '=' then its a custom definition, else we look it up
+                if (dataParam.includes('=')) {
+                    dataParam = dataParam.replace(/;/g, '\n');
+                }
+                else {
                     let dataItem = defaults.find(item => item.id === dataParam)?.value;
 
                     if (!dataItem)
@@ -1062,12 +1187,13 @@
                     if (titleParam.length == 0)
                         titleParam = dataItem.title;
 
-                    dataParam = dataItem.data;
+                    dataParam = dataItem.data.map(line => line.trim()).join('\n');
                 }
-                dataParam = dataParam.replace(/;/g, '\n');
-                document.getElementById('title').value = titleParam;
-                document.getElementById('data').value = dataParam.replace(/;/g, '\n');
 
+                document.getElementById('title').value = titleParam;
+                document.getElementById('data').value = dataParam; //.replace(/;/g, '\n');
+
+                // Message
                 // Any message with a space in is treated as a custom message, else we look it up
                 let msg;
                 if (messageCoreParam.includes(' '))
@@ -1102,31 +1228,69 @@
                     id: 'Default',
                     value: {
                         title: 'Test#Title',
-                        data: 'Test Group=One, Two, Three'
-                    }
-                },
-                {
-                    id: 'PF-G',
-                    value: {
-                        title: 'Play Fighting#Giving',
-                        data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain;Physical Harm=Biting, Scratching, Bruises;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
+                        data: ['Test Group=One, Two, Three',
+                            'Another Group=A, B, C, D, E']
                     }
                 },
                 {
                     id: 'PF-R',
                     value: {
-                        title: 'Play Fighting#Receiving',
-                        data: 'Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.;Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal;Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain;Physical Harm=Biting, Scratching, Bruises;Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks;Psychological=Degradation, Praise;Dangerous=Chokes and#Strangles, Breath Play'
+                        title: 'Play Fighting',
+                        data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.',
+                            'Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal',
+                            'Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain',
+                            'Physical Harm=Biting, Scratching, Bruises',
+                            'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
+                            'Psychological=Degradation, Praise',
+                            'Dangerous=Chokes and#Strangles, Breath Play'
+                        ]
+                    }
+                },
+                {
+                    id: 'Play',
+                    value: {
+                        title: 'General Play',
+                        data: ['Sensory=Impact, Strokes, Tickles, Sensory#Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
+                            'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative#Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                            'Toys=Vibrators, Dildos, Butt Plus',
+                            'Restraint=Rope, Chains, Tape, Soft Cuffs, Metal Cuffs, Spreader Bars, Gags, Blindfolds, Hoods',
+                            'Breath Play=Chocking, Strangling, Smothering, Hand over#Nose, Hand over#Mouth, Postural',
+                            'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
+                            'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
+                            'Misc.=Allergies, Lube'
+                        ]
+                    }
+                },
+                {
+                    id: 'Persona',
+                    value: {
+                        title: 'Persona & Preferences',
+                        data: ['Head Space=Pet Play, Age Play',
+                            'Servitude=Service, High Protocol, Worship, Chores, Homework',
+                            'Humiliation=Public Humiliation, Embarrassment, Cuckolding, Chastity, Financial#Domination',
+                            'Persona=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Voyeur, Exhibitionist, Primal',
+                            'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior#Modification',
+                            'Theatrics=Role Play, Scenes',
+                            'Words=Dirty Talk, Verbal#Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
+                        ]
                     }
                 }
             ];
 
             const defaultsAxisLabels = [
                 { id: 'None', description: '% values', value: '' },
-                { id: 'EmojiSmiles', description: 'Emoji Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
-                { id: '10s', description: '10s', value: '0,10,20,30,40,50,60,70,80,90,100' },
-                { id: '20s', description: '20s', value: '0,20,40,60,80,100' },
-                { id: '50s', description: '30s', value: '0,50,100' }
+                { id: 'EmojiSmiles', description: 'Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
+                { id: 'EmojiHealth', description: 'Health 🤢😷🤒🙂😃', value: '🤢,😷,🤒,🙂,😃' },
+                { id: 'EmojiHearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
+                { id: 'EmojiMoon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
+                { id: 'EmojiThumbs', description: 'Thumbs 👍🤔👎', value: '👎,🤔,👍' },
+                { id: 'EmojiTThumbs', description: 'Thoughtful Thumbs 👍👎', value: '👎,👍' },
+                { id: 'EmojiTraffic', description: 'Traffic Lights 🚦', value: '🔴,🟡,🟢' },
+                { id: '10s', description: '10s %', value: '0%,10%,20%,30%,40%,50%,60%,70%,80%,90%,100%' },
+                { id: '20s', description: '20s %', value: '0%,20%,40%,60%,80%,100%' },
+                { id: '50s', description: '30s %', value: '0%,50%,100%' },
+                { id: 'YN', description: 'Yes & No', value: 'No,Yes' },
+                { id: 'TF', description: 'True & False', value: 'False,True' }
             ];
 
             const defaultMessages = [
@@ -1136,8 +1300,18 @@
                 { id: 'with', value: '#is happy to do this#with' }
             ];
 
+            function addPlaceholderOption(select, text = '-- Select a template --') {
+                const option = document.createElement('option');
+                option.textContent = text;
+                option.value = '';
+                option.disabled = true;
+                option.selected = true;
+                select.appendChild(option);
+            }
+
             // Populate drop downs
             const templateDropdown = document.getElementById('templates');
+            addPlaceholderOption(templateDropdown);
             defaults.forEach(({ id, value }) => {
                 const option = document.createElement('option');
                 option.value = id;
@@ -1146,6 +1320,7 @@
             });
 
             const axisDropdown = document.getElementById('axisLabelDefaults');
+            addPlaceholderOption(axisDropdown);
             defaultsAxisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
@@ -1155,6 +1330,7 @@
 
             // Populate drop downs
             const messageDropDown = document.getElementById('messageTemplates');
+            addPlaceholderOption(messageDropDown);
             defaultMessages.forEach(({ id, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
