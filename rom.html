@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- Radar-o-Matatron -->
-<!-- v0.1.250829 -->
-<!-- (c) 2025 -->
+<!--
+    Radar-o-Matatron
+    v0.1.250829
+    (c) 2025
+
+    Notes:
+        Main script initialization is called on document load
+-->
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Radar-o-matatron</title>
     <style>
-        /*        :root {
+        /*  :root {
             --bg: #0e0f12;
             --panel: #151922;
             --ink: #e7ecf3;
@@ -238,7 +243,6 @@
             z-index: 999;
         }
 
-
         @keyframes swing {
             0% {
                 transform: rotate(45deg);
@@ -252,39 +256,41 @@
                 transform: rotate(45deg);
             }
         }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 999;
+        }
     </style>
 </head>
 
 <body>
-    <div id="toast" style="
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #333;
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-size: 14px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-      z-index: 999;">
+    <div id="toast" class="toast">
     </div>
 
-    <img id="SockGoblin" src="Sock Goblin.png" alt="Decorative" class="angled-image">
+    <img id="SockGoblin" src="SockGoblin.png" alt="Decorative" class="angled-image">
 
     <div class="wrap">
         <div class="panel">
             <div style="text-align: center; font-size: 24px;">Radar-o-Matatron</div>
             <div style="text-align: center; font-size: 10px; font-style: italic;">The chart maker with an
                 overcomplicated name!</div>
-            <!-- Button Group -->
             <div id="canvasButtons"
                 style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
                 <button id="copyBtn" style="white-space: nowrap;">📋 Copy to clipboard</button>
                 <button id="saveBtn" style="white-space: nowrap;">💾 Save image</button>
-                <button id="shareChart" style="white-space: nowrap;">🔗 Share new</button>
+                <button id="shareChart" style="white-space: nowrap;">🔗 Share</button>
             </div>
             <div class="canvasWrap" style="margin-top: 10px;">
                 <canvas id="chartCanvas"></canvas>
@@ -305,13 +311,13 @@
             <div class="row">
                 <button id="toggleOptions"
                     onclick="document.getElementById('options').style.display = document.getElementById('options').style.display === 'none' ? 'block' : 'none'">
-                    ⚙️ Toggle Options</button>
+                    ⚙️ Toggle chart configuration options</button>
             </div>
             <div id="options" style="margin-top: 6px; display: none">
 
                 <div class="row">
                     <div>
-                        <b>WARNING - changing options will reset your chart data!</b><br /><br />
+                        WARNING - changing options <i>may</i>> reset your chart data!<br /><br />
                         Where you see # in any text, it is a placeholder where a new line will be inserted when
                         displayed on the chart. This can help with layout.
                     </div>
@@ -368,7 +374,7 @@
                 let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
             };
 
-            // Fonts
+            // --- Fonts
             const fontTitle = '36px system-ui, sans-serif';
             const fontDate = '22px system-ui, sans-serif';
             const fontMessage = '22px system-ui, sans-serif';
@@ -384,24 +390,27 @@
                 '#3f6aa5', '#f07f1a', '#e04345', '#65b1ac', '#469e3b',
                 '#ebc62b', '#a7649b', '#ff8c97', '#8a6248', '#a79a95'
             ];
+
             const hexToRgb = h => {
                 const m = h.replace('#', ''); const x = m.length === 3 ? m.split('').map(c => c + c).join('') : m;
                 const n = parseInt(x, 16); return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
             };
+
             const rgba = (hex, a) => {
                 const { r, g, b } = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`;
             };
+
             const genHue = i => `hsl(${(i * 233) % 360} 60% 55%)`; // fallback beyond base palette
 
             // --- State
             let groups = []; // [{name, items:[...]}]
-            let items = [];  // flattened items
+            let allItems = [];  // flattened items
             let itemAngles = []; // radians per item
-            let values = new Map(); // item -> 0..100
+            let itemValues = new Map(); // item -> 0..100
             let groupColors = new Map(); // group -> color
             let axis;
 
-            const els = {
+            const ui = {
                 chartData: $('#data'),
                 title: $('#title'),
                 axisLabels: $('#axisLabels'),
@@ -410,19 +419,26 @@
                 controls: $('#controls'),
                 messageStart: $('#messageStart'),
                 messageCore: $('#messageCore'),
-                messageEnd: $('#messageEnd')
+                messageEnd: $('#messageEnd'),
+                rotateLabels: $('#rotateLabels'),
+                showValues: $('#showValues'),
+                rotateValueLabels: $('#rotateValueLabels'),
+                placeValueLabelsAtEdge: $('#placeValueLabelsAtEdge')
             };
-            const ctx = els.canvas.getContext('2d');
 
+            const ctx = ui.canvas.getContext('2d');
+
+            // --- Draw lines of text to canvas down from start point
             function drawMultilineText(ctx, text, x, y, lineHeight) {
-                const lines = text.split('#'); // Split into lines
+                const lines = text.split('#');
                 lines.forEach((line, i) => {
                     ctx.fillText(line, x, y + i * lineHeight);
                 });
             }
 
+            // --- Draw lines of text to canvas up from start point
             function drawMultilineTextUp(ctx, text, x, y, lineHeight) {
-                const lines = text.split('#'); // Split into lines
+                const lines = text.split('#');
                 const totalHeight = (lines.length - 1) * lineHeight;
 
                 lines.forEach((line, i) => {
@@ -431,6 +447,7 @@
 
             }
 
+            // --- Draw lines of text centered on the start point
             function drawMultilineTextCentered(ctx, text, x, y, lineHeight) {
                 const lines = text.split('#'); // Split into lines
                 const totalHeight = (lines.length - 1) * lineHeight;
@@ -442,38 +459,42 @@
 
             }
 
-            // --- Parsing
+            // --- Parse Data into group and item structures
             function parseData(input) {
                 const out = [];
                 const seenGroups = new Set();
                 input.split(/\r?\n/).forEach(line => {
                     const raw = line.trim();
                     if (!raw) return;
+
                     const eq = raw.indexOf('=');
                     if (eq === -1) return;
+
                     const name = raw.slice(0, eq).trim();
                     if (!name) return;
+
                     if (seenGroups.has(name)) return;
+
                     const right = raw.slice(eq + 1);
                     const items = right
                         .split(',')
                         .map(s => s.trim())
                         .filter(Boolean)
-                        .map(value => ({ value, group: name }));
+                        .map(value => ({ value, group: name, key: `${value}.${name}` }));
 
                     if (!items.length) return;
                     seenGroups.add(name);
                     out.push({ name, items });
                 });
+
                 return out;
             }
 
             function computeAngles() {
-                items = groups.flatMap(g => g.items);
-                const N = Math.max(1, items.length);
+                const N = Math.max(1, allItems.length);
                 const step = (Math.PI * 2) / N;
-                const start = -Math.PI / 2; // top
-                itemAngles = items.map((_, i) => start + i * step);
+                const start = -Math.PI / 2;
+                itemAngles = allItems.map((_, i) => start + i * step);
             }
 
             function assignColors() {
@@ -516,11 +537,15 @@
 
             // --- Controls
             function buildControls() {
-                const old = new Map(values);
-                values.clear();
-                items.forEach(it => values.set(it, old.has(it) ? old.get(it) : 50));
+                // When we rebuild the controls - the previous values may or may not be there - we try re-populate them best we can
+                const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
+                itemValues.clear();
 
-                els.controls.innerHTML = '';
+                allItems.forEach(it => {
+                    itemValues.set(it, old.has(it.key) ? old.get(it.key) : 50);
+                });
+
+                ui.controls.innerHTML = '';
                 groups.forEach(g => {
                     const fs = document.createElement('fieldset');
                     const legend = document.createElement('legend');
@@ -541,8 +566,8 @@
                         right.className = 'valueBox';
                         const sliderValue = document.createElement('span');
 
-                        // --- Map slider value to axis label ---
-                        const val = String(values.get(item));
+                        // --- Draw initial value of axis label
+                        const val = String(itemValues.get(item));
                         const label = axis.customValues
                             ? axis.labels[Math.round(val / 100 * (axis.labels.length - 1))]
                             : `${val}%`;
@@ -553,14 +578,14 @@
                         slider.type = 'range';
                         slider.min = '0';
                         slider.max = '100';
-                        slider.value = String(values.get(item));
+                        slider.value = String(itemValues.get(item));
                         slider.ariaLabel = `${item} value`;
 
                         slider.addEventListener('input', () => {
                             const v = +slider.value;
-                            values.set(item, v);
+                            itemValues.set(item, v);
 
-                            // --- Map slider value to axis label ---
+                            // --- Map slider value to axis label
                             const label = axis.customValues
                                 ? axis.labels[Math.round(v / 100 * (axis.labels.length - 1))]
                                 : `${v}%`;
@@ -575,20 +600,22 @@
                         fs.appendChild(row);
                     });
 
-                    els.controls.appendChild(fs);
+                    ui.controls.appendChild(fs);
                 });
             }
 
             // --- Canvas sizing
+            // Canvas is a fixed size (as we want to produce a fixed image size)
+            // Original dynamic code left in for reference
             function resizeCanvas() {
                 const cw = 1024; //els.canvas.clientWidth || 600;
                 const ch = 1024; //els.canvas.clientHeight || 600;
 
-                els.canvas.width = cw;
-                els.canvas.height = ch;
+                ui.canvas.width = cw;
+                ui.canvas.height = ch;
 
-                //const dcw = els.canvas.clientWidth || 600;
-                //const dch = els.canvas.clientHeight || 600;
+                //const dcw = ui.canvas.clientWidth || 600;
+                //const dch = ui.canvas.clientHeight || 600;
 
                 //const ratio = dpr();
                 //els.canvas.style.width = Math.round(cw * ratio);
@@ -596,15 +623,15 @@
                 //ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             }
 
-            // --- Drawing
+            // --- Core Chart redraw
             function draw() {
                 resizeCanvas();
-                const w = els.canvas.width; //.clientWidth || 600;
-                const h = els.canvas.height; //clientHeight || 600;
+                const w = ui.canvas.width; //.clientWidth || 600;
+                const h = ui.canvas.height; //clientHeight || 600;
 
                 // ctx.clearRect(0, 0, w, h);
                 ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
+                ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
 
                 // layout
                 const cx = w / 2, cy = h / 2;
@@ -615,7 +642,7 @@
                 ctx.font = fontLabelMeasurement; // or dynamically set based on config
 
                 // Find longest strings
-                const longestItem = items.reduce((a, c) => c.value.length > a.length ? c : a, '');
+                const longestItem = allItems.reduce((a, c) => c.value.length > a.length ? c : a, '');
                 const longestGroup = groups.reduce((a, c) => c.name.length > a.length ? c.name : a, '');
 
                 // Measure actual pixel width
@@ -625,6 +652,7 @@
                 // Add some breathing space
                 const labelPad = Math.min(140, itemWidth + 30);
                 const groupPad = Math.min(170, groupWidth + 50);
+
                 // Calculate radius based on canvas size and label padding
                 const chartScale = 2.15;
                 const chartRadius = Math.max(30, Math.min(w, h) / chartScale - Math.max(60, Math.min(labelPad, groupPad)));
@@ -632,22 +660,22 @@
                 const labelsExtraRadius = 75;
                 const edgeLLabelsExtraRadius = 50;
 
-                const rotateLabels = $('#rotateLabels').checked;
-                const showValues = $('#showValues').checked;
-                const rotateValueLabels = $('#rotateValueLabels').checked;
-                const edgeValueLabels = $('#placeValueLabelsAtEdge').checked;
+                const rotateLabels = ui.rotateLabels.checked;
+                const showValues = ui.showValues.checked;
+                const rotateValueLabels = ui.rotateValueLabels.checked;
+                const edgeValueLabels = ui.placeValueLabelsAtEdge.checked;
 
-                //   const axis = parseAxisLabels(els.axis.value);
-
-                const showPolygonGrid = els.gridStyle.value === 'polygon';
+                const showPolygonGrid = ui.gridStyle.value === 'polygon';
 
                 ctx.save();
                 const img = document.getElementById('SockGoblin');
                 const scale = 150 / img.naturalWidth;
                 const scaledHeight = img.naturalHeight * scale;
-                ctx.drawImage(img, els.canvas.width - 160, 10, 150, scaledHeight);
+                ctx.drawImage(img, ui.canvas.width - 160, 10, 150, scaledHeight);
+                ctx.restore();
 
                 // background
+
                 ctx.save();
                 ctx.translate(cx, cy);
 
@@ -655,7 +683,7 @@
                 {
                     let idx = 0;
                     let offset = 0;
-                    const N = Math.max(1, items.length);
+                    const N = Math.max(1, allItems.length);
                     const step = (Math.PI * 2) / N;
                     const start = -Math.PI / 2;
                     groups.forEach(g => {
@@ -690,9 +718,9 @@
                     axis.pos.forEach((p, i) => {
                         const r = p * chartRadius;
                         if (r <= 0) return; // skip center
-                        if (showPolygonGrid && items.length >= 3) {
+                        if (showPolygonGrid && allItems.length >= 3) {
                             ctx.beginPath();
-                            items.forEach((_, k) => {
+                            allItems.forEach((_, k) => {
                                 const a = itemAngles[k];
                                 const x = Math.cos(a) * r;
                                 const y = Math.sin(a) * r;
@@ -706,6 +734,8 @@
                             ctx.stroke();
                         }
                     });
+
+                    // X axis labels - currently hidden as not really required
 
                     // // axis labels along +X
                     // ctx.fillStyle = '#b9c2d6';
@@ -732,7 +762,7 @@
                 {
                     ctx.lineWidth = 1;
                     //ctx.strokeStyle = '#2f3a53';
-                    items.forEach((it, i) => {
+                    allItems.forEach((it, i) => {
                         const a = itemAngles[i];
                         const x = Math.cos(a) * chartRadius;
                         const y = Math.sin(a) * chartRadius;
@@ -746,12 +776,12 @@
                     });
                 }
 
-                // data polygon
+                // data polygons (main coloured area of chart)
                 {
-                    if (items.length >= 2) {
+                    if (allItems.length >= 2) {
                         ctx.beginPath();
-                        items.forEach((it, i) => {
-                            const v = (values.get(it) ?? 0) / 100;
+                        allItems.forEach((it, i) => {
+                            const v = (itemValues.get(it) ?? 0) / 100;
                             const r = v * chartRadius;
                             const a = itemAngles[i];
                             const x = Math.cos(a) * r;
@@ -760,7 +790,7 @@
                         });
                         ctx.closePath();
 
-                        const canvas = els.canvas;
+                        const canvas = ui.canvas;
                         const cx = canvas.width / 2;
                         const cy = canvas.height / 2;
                         const innerRadius = 0;
@@ -770,8 +800,8 @@
                         grad.addColorStop(0, 'rgba(255, 0, 0, 0.48)');
                         grad.addColorStop(1, 'rgba(0, 255, 0, 0.48)');
 
-                        ctx.save();                         // preserve current transform
-                        ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform to canvas space
+                        ctx.save();
+                        ctx.setTransform(1, 0, 0, 1, 0, 0);
                         ctx.fillStyle = grad;
                         ctx.fill();
                         ctx.restore();
@@ -785,9 +815,9 @@
                             ? fontPointLabelNoneNumeric
                             : fontPointLabelIsNumeric;
 
-                        // vertices
-                        items.forEach((it, i) => {
-                            const v = (values.get(it) ?? 0) / 100;
+                        // Vertices
+                        allItems.forEach((it, i) => {
+                            const v = (itemValues.get(it) ?? 0) / 100;
                             const r = v * chartRadius;
                             const a = itemAngles[i];
                             const x = Math.cos(a) * r;
@@ -802,7 +832,7 @@
                             const xLabel = Math.cos(a) * rLabel;
                             const yLabel = Math.sin(a) * rLabel;
 
-                            const val = values.get(it) ?? 50;
+                            const val = itemValues.get(it) ?? 50;
 
                             ctx.beginPath();
                             ctx.arc(x, y, 5, 0, Math.PI * 2);
@@ -833,10 +863,10 @@
                                 ctx.textBaseline = 'middle';
 
                                 if (rotateValueLabels) {
+                                    // Labels rotate flat along the arc (tangential)
                                     ctx.save();
                                     ctx.translate(xLabel, yLabel);
 
-                                    // Rotate flat along the arc (tangential)
                                     const tangentAngle = a + Math.PI / 2;
                                     ctx.rotate(tangentAngle);
                                     ctx.fillText(label, 0, 0);
@@ -844,6 +874,7 @@
                                     ctx.restore();
                                 }
                                 else
+                                    // Standard label orientation
                                     ctx.fillText(label, xLabel, yLabel);
                             }
                         });
@@ -856,8 +887,7 @@
                     const fontSize = parseInt(ctx.font.match(/\d+/)[0], 10);
                     const lineHeight = fontSize * 1.2;
 
-                    //ctx.fillStyle = '#0f172f';
-                    items.forEach((item, i) => {
+                    allItems.forEach((item, i) => {
                         const a = itemAngles[i];
                         const r = chartRadius + labelsExtraRadius;
                         const x = Math.cos(a) * r;
@@ -867,15 +897,14 @@
                         ctx.fillStyle = rgba(groupColors.get(item.group), 0.95);
 
                         if (rotateLabels) {
-                            // --- ROTATE VARIANT
+                            // Rotate labels flat along the arc (tangential)
                             ctx.save();
                             ctx.translate(x, y);
 
-                            // Rotate flat along the arc (tangential)
                             const tangentAngle = a + Math.PI;
                             ctx.rotate(tangentAngle);
 
-                            // Flip upside-down labels for readability
+                            // Flip upside-down labels for readability depending on position
                             let flipped = false;
                             if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2) {
                                 ctx.rotate(Math.PI);
@@ -886,21 +915,18 @@
                             ctx.textAlign = flipped ? 'left' : 'right';
                             ctx.textBaseline = flipped ? 'middle' : 'middle';
 
-
                             drawMultilineTextCentered(ctx, item.value, 0, 0, lineHeight);
 
                             ctx.restore();
                         }
                         else {
-                            // NORMAL VARIANT
+                            // Standard orientation labels
                             ctx.textBaseline = Math.abs(sa) < 0.3 ? 'middle' : (sa > 0 ? 'top' : 'bottom');
                             if (ca > 0.25) ctx.textAlign = 'left';
                             else if (ca < -0.25) ctx.textAlign = 'right';
                             else ctx.textAlign = 'center';
 
                             drawMultilineText(ctx, item.value, x, y, lineHeight);
-
-                            // ctx.fillText(it, x, y);
                         }
                     });
                 }
@@ -909,7 +935,7 @@
                 {
                     ctx.font = fontGroupLabel;
                     ctx.textBaseline = 'middle';
-                    const N = Math.max(1, items.length);
+                    const N = Math.max(1, allItems.length);
                     const step = (Math.PI * 2) / N;
                     const start = -Math.PI / 2;
                     let offset = 0;
@@ -949,11 +975,11 @@
                     });
                 }
 
-                // radial item separation lines (top pass to ensure always visible)
+                // radial item separation lines (rendered at end to ensure always visible)
                 {
                     ctx.lineWidth = 1;
                     ctx.strokeStyle = 'rgba(0,0,0,0.10)';
-                    items.forEach((_, i) => {
+                    allItems.forEach((_, i) => {
                         const a = itemAngles[i];
                         const x = Math.cos(a) * chartRadius;
                         const y = Math.sin(a) * chartRadius;
@@ -971,8 +997,7 @@
                 ctx.fillStyle = '#000000';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'top';
-                //ctx.fillText(els.title.value, 16, 16); //els.canvas.width / 2, 16);
-                drawMultilineText(ctx, els.title.value, 16, 16, 40);
+                drawMultilineText(ctx, ui.title.value, 16, 16, 40);
                 ctx.restore();
 
                 ctx.save();
@@ -983,19 +1008,19 @@
 
                 const now = new Date();
                 const formattedDate = `${String(now.getDate()).padStart(2, '0')} ${now.toLocaleString('en-GB', { month: 'short' })} ${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                ctx.fillText(formattedDate, els.canvas.width - 16, els.canvas.height - 10); //els.canvas.width / 2, 16);
+                ctx.fillText(formattedDate, ui.canvas.width - 16, ui.canvas.height - 10); //els.canvas.width / 2, 16);
                 ctx.restore();
 
-                if (els.messageCore.value.length > 0) {
-                    let msg = els.messageCore.value.trim();
+                if (ui.messageCore.value.length > 0) {
+                    let msg = ui.messageCore.value.trim();
 
-                    const start = els.messageStart.value.trim();
+                    const start = ui.messageStart.value.trim();
                     if (start.length > 0)
                         msg = start + ' ' + msg;
                     else
                         msg = 'Someone ' + msg;
 
-                    const end = els.messageEnd.value.trim();
+                    const end = ui.messageEnd.value.trim();
                     if (end.length > 0)
                         msg += ' ' + end;
                     else
@@ -1006,75 +1031,75 @@
                     ctx.fillStyle = '#000000';
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'bottom';
-                    drawMultilineTextUp(ctx, msg, 16, els.canvas.height - 10, 28);
+                    drawMultilineTextUp(ctx, msg, 16, ui.canvas.height - 10, 28);
                     ctx.restore();
                 }
             }
 
-            // --- Wiring
+            // --- Processing/Generation of all elements
             function rebuildAll() {
-                groups = parseData(els.chartData.value);
+                groups = parseData(ui.chartData.value);
+                allItems = groups.flatMap(g => g.items);
                 computeAngles();
                 assignColors();
-                axis = parseAxisLabels(els.axisLabels.value);
+                console.log("HERE " + ui.axisLabels.value);
+                axis = parseAxisLabels(ui.axisLabels.value);
                 buildControls();
                 draw();
             }
 
-            // Events/EventListeners
-            els.chartData.addEventListener('input', debounce(rebuildAll, 200));
-            els.axisLabels.addEventListener('input', debounce(rebuildAll, 100));
-            els.title.addEventListener('input', debounce(draw, 100));
-            els.gridStyle.addEventListener('change', draw);
-            els.messageStart.addEventListener('input', debounce(draw, 100));
-            els.messageCore.addEventListener('input', debounce(draw, 100));
-            els.messageEnd.addEventListener('input', debounce(draw, 100));
+            // --- Events/EventListeners
+            ui.chartData.addEventListener('input', debounce(rebuildAll, 200));
+            ui.axisLabels.addEventListener('input', debounce(rebuildAll, 100));
+            ui.title.addEventListener('input', debounce(draw, 100));
+            ui.gridStyle.addEventListener('change', draw);
+            ui.messageStart.addEventListener('input', debounce(draw, 100));
+            ui.messageCore.addEventListener('input', debounce(draw, 100));
+            ui.messageEnd.addEventListener('input', debounce(draw, 100));
 
             window.addEventListener('resize', debounce(draw, 60), { passive: true });
+
             $('#rotateLabels').addEventListener('change', draw);
             $('#showValues').addEventListener('change', draw);
             $('#rotateValueLabels').addEventListener('change', draw);
             $('#placeValueLabelsAtEdge').addEventListener('change', draw);
 
-            const messageTemplates = document.getElementById('messageTemplates');
-            const templates = document.getElementById('templates');
-            const axisLabelDefaults = document.getElementById('axisLabelDefaults');
-            const axisLabels = document.getElementById('axisLabels');
-
-            templates.addEventListener('change', () => {
+            $('#templates').addEventListener('change', () => {
                 const selectedValue = templates.value;
 
-                let dataItem = defaults.find(item => item.id === selectedValue)?.value;
+                let dataItem = defaultData.chartData.find(item => item.id === selectedValue)?.value;
                 if (!dataItem)
-                    dataItem = defaults.find(item => item.id === 'Default')?.value;
+                    dataItem = defaultData.chartData.find(item => item.id === 'Default')?.value;
 
                 titleParam = dataItem.title;
                 dataParam = dataItem.data.map(line => line.trim()).join('\n');
 
                 document.getElementById('title').value = titleParam;
-                document.getElementById('data').value = dataParam; //.replace(/;/g, '\n');
+                document.getElementById('data').value = dataParam;
 
                 rebuildAll();
             });
 
-            axisLabelDefaults.addEventListener('change', () => {
+            $('#axisLabelDefaults').addEventListener('change', () => {
                 const selectedValue = axisLabelDefaults.value;
-                axisLabels.value = selectedValue || ''; // fallback to empty string
+                ui.axisLabels.value = selectedValue || '';
                 rebuildAll();
             });
 
-            messageTemplates.addEventListener('change', () => {
+            $('#messageTemplates').addEventListener('change', () => {
                 const msg = messageTemplates.value;
-                document.getElementById('messageCore').value = msg || ''; // fallback to empty string
+                document.getElementById('messageCore').value = msg || '';
 
-                if (els.messageStart.value.trim().length === 0 && msg.length > 0)
-                    els.messageStart.value = 'Person A';
+                if (ui.messageStart.value.trim().length === 0 && msg.length > 0)
+                    ui.messageStart.value = 'Person A';
 
-                if (els.messageEnd.value.trim().length === 0 && msg.length > 0)
-                    els.messageEnd.value = 'Person B';
+                if (ui.messageEnd.value.trim().length === 0 && msg.length > 0)
+                    ui.messageEnd.value = 'Person B';
 
                 draw();
             });
+
+            // --- Extra UI Functionality
 
             function setToast(message, duration = 3000) {
                 const toast = document.getElementById('toast');
@@ -1086,10 +1111,10 @@
                 }, duration);
             }
 
-            // Copy to clipboard
-            document.getElementById('copyBtn').addEventListener('click', async () => {
+            // --- Copy to clipboard
+            $('#copyBtn').addEventListener('click', async () => {
                 try {
-                    const blob = await new Promise(resolve => els.canvas.toBlob(resolve, 'image/png'));
+                    const blob = await new Promise(resolve => ui.canvas.toBlob(resolve, 'image/png'));
                     await navigator.clipboard.write([
                         new ClipboardItem({ 'image/png': blob })
                     ]);
@@ -1100,39 +1125,38 @@
                 }
             });
 
-            // Save as PNG
-            document.getElementById('saveBtn').addEventListener('click', () => {
+            // --- Save/download as PNG
+            $('#saveBtn').addEventListener('click', () => {
                 const pad = n => String(n).padStart(2, '0');
                 const now = new Date();
                 const formattedDate = `${now.getFullYear()}_${pad(now.getMonth() + 1)}_${pad(now.getDate())}_${pad(now.getHours())}_${pad(now.getMinutes())}`;
                 const link = document.createElement('a');
                 link.download = `radar_chart_${formattedDate}.png`;
-                link.href = els.canvas.toDataURL('image/png');
+                link.href = ui.canvas.toDataURL('image/png');
                 link.click();
 
                 setToast('✅ Image saved - check your downloads folder.');
             });
 
-            // Redraw on image load (so appears in chart)
-            document.getElementById('SockGoblin').addEventListener('load', () => {
+            // --- Redraw on image load (so appears in chart)
+            $('#SockGoblin').addEventListener('load', () => {
                 draw();
             });
 
 
-            // Share chart link
-
-            document.getElementById('shareChart').addEventListener('click', () => {
+            // --- Share chart link
+            $('#shareChart').addEventListener('click', () => {
                 // Check if defaults have flattened variants of data
-                if (defaults[0].value.flattenedData === '')
+                if (defaultData.chartData[0].value.flattenedData === '')
                     // Create a flattened version of data for when checking text below for link creation
-                    defaults.forEach(it => it.value.flattenedData = it.value.data.join(';'));
+                    defaultData.chartData.forEach(it => it.value.flattenedData = it.value.data.join(';'));
 
                 // Data combined into equivalent of single line with ; separators
-                let data = els.chartData.value.replace(/\n/g, ';');
+                let data = ui.chartData.value.replace(/\n/g, ';');
 
                 // Check to see if the axisText matches any of the defaults, if so use the id
                 // Reminder that even if someone selected text from a template, it's possible they modified it
-                let matchedDefault = defaults.find(item => item.value.flattenedData === data);
+                let matchedDefault = defaultData.chartData.find(item => item.value.flattenedData === data);
                 if (matchedDefault)
                     data = matchedDefault.id;
                 // else leave data alone, the string contains the data definition
@@ -1143,12 +1167,27 @@
                 //// if (matchedDefault)
                 ////     title = matchedDefault.id;
 
-                const encodedTitle = encodeURIComponent(els.title.value.trim());
+                let axisLabels = ui.axisLabels.value.trim();
+
+                matchedDefault = defaultData.axisLabels.find(item => item.value === axisLabels);
+                if (matchedDefault)
+                    axisLabels = matchedDefault.id;
+
+                const encodedTitle = encodeURIComponent(ui.title.value.trim());
                 const encodedData = encodeURIComponent(data); //).replace(/\n+/g, ';'));
-                const encodedAxis = encodeURIComponent(els.axisLabels.value.trim());
-                const encodedMessageStart = encodeURIComponent(els.messageStart.value.trim());
-                const encodedMessageCore = encodeURIComponent(els.messageCore.value.trim());
-                const encodedMessageEnd = encodeURIComponent(els.messageEnd.value.trim());
+                const encodedAxis = encodeURIComponent(axisLabels);
+                const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim());
+                const encodedMessageCore = encodeURIComponent(ui.messageCore.value.trim());
+                const encodedMessageEnd = encodeURIComponent(ui.messageEnd.value.trim());
+
+                // Values
+                // If ALL values are default, don't bother (e.g. sharing a fresh graph)
+                const numGroups = groups.length;
+                const numItems = itemValues.size;
+                let valueList;
+                if (numGroups > 0 && numItems > 0) {
+                    valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + [...itemValues.values()].join('.');
+                }
 
                 // Build full URL
                 const baseUrl = window.location.origin + window.location.pathname;
@@ -1159,12 +1198,12 @@
                     encodedAxis && `axis=${encodedAxis}`,
                     encodedMessageStart && `start=${encodedMessageStart}`,
                     encodedMessageCore && `message=${encodedMessageCore}`,
-                    encodedMessageEnd && `end=${encodedMessageEnd}`
+                    encodedMessageEnd && `end=${encodedMessageEnd}`,
+                    valueList
                 ].filter(Boolean).join('&');
 
                 const fullUrl = `${baseUrl}${params ? '?' + params : ''}`;
                 console.log('Full URL:', fullUrl);
-                //const fullUrl = `${baseUrl}?title=${encodedTitle}&axis=${encodedAxis}&data=${encodedData}&message-start=${encodedMessageStart}&message=${encodedMessageCore}&message-end=${encodedMessageEnd}`;
 
                 let toastMessage;
                 if (fullUrl.length > 2000) {
@@ -1180,7 +1219,7 @@
                     });
             });
 
-            // Processing of parameters etc. after page loaded
+            // --- Processing of parameters etc. after page loaded
             window.addEventListener('DOMContentLoaded', () => {
                 const params = new URLSearchParams(window.location.search);
                 let dataParam = params.get('data') || '';     // default or overrides values if contains a =
@@ -1189,20 +1228,21 @@
                 let messageStartParam = params.get('start') || '';
                 let messageCoreParam = params.get('message') || '';
                 let messageEndParam = params.get('end') || '';
+                let existingValuesParam = params.get('values') || '';
                 let dataItem;
 
+                let matchedDefault;
+
                 // Axis
-                if (axisParam.length == 0) {
-                    axisParam = 'EmojiSmiles'; // default if not specified
-
+                if (!axisParam || axisParam.length == 0)
+                    axisParam = defaultData.axisLabels.find(item => item.id === 'EmojiSmiles')?.value || '';  // default if nothing specified
+                else if (!axisParam.includes(',')) {
+                    // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
+                    matchedDefault = defaultData.axisLabels.find(item => item.id === axisParam);
+                    if (matchedDefault)
+                        axisParam = matchedDefault.value;
                 }
-
-                // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
-                if (axisParam.includes(','))
-                    document.getElementById('axisLabels').value = axisParam;
-                else
-                    document.getElementById('axisLabels').value = (defaultsAxisLabels.find(item => item.id === axisParam)?.value) || '';
-
+                ui.axisLabels.value = axisParam;
 
                 // Title
                 // If a default id exists for the title, we use that default, else we just keep as is
@@ -1221,10 +1261,10 @@
                     dataParam = dataParam.replace(/;/g, '\n');
                 }
                 else {
-                    dataItem = defaults.find(item => item.id === dataParam)?.value;
+                    dataItem = defaultData.chartData.find(item => item.id === dataParam)?.value;
 
                     if (!dataItem)
-                        dataItem = defaults.find(item => item.id === 'Default')?.value;
+                        dataItem = defaultData.chartData.find(item => item.id === 'Default')?.value;
 
                     if (titleParam.length == 0)
                         titleParam = dataItem.title;
@@ -1232,8 +1272,8 @@
                     dataParam = dataItem.data.map(line => line.trim()).join('\n');
                 }
 
-                document.getElementById('title').value = titleParam;
-                document.getElementById('data').value = dataParam; //.replace(/;/g, '\n');
+                ui.title.value = titleParam;
+                ui.chartData.value = dataParam;
 
                 // Message
                 // Any message with a space in is treated as a custom message, else we look it up
@@ -1241,9 +1281,9 @@
                 if (messageCoreParam.includes(' '))
                     msg = messageCoreParam;
                 else
-                    msg = (defaultMessages.find(item => item.id === messageCoreParam)?.value) || '';
+                    msg = (defaultData.messages.find(item => item.id === messageCoreParam)?.value) || '';
 
-                document.getElementById('messageCore').value = msg;
+                ui.messageCore.value = msg;
 
                 let hasCoreMessage = msg.length > 0;
 
@@ -1252,101 +1292,148 @@
                 else
                     if (hasCoreMessage)
                         msg = 'Person A';
-                document.getElementById('messageStart').value = msg;
+                ui.messageStart.value = msg;
 
                 if (messageEndParam.length > 0)
                     msg = messageEndParam;
                 else
                     if (hasCoreMessage)
                         msg = 'Person B';
-                document.getElementById('messageEnd').value = msg;
+                ui.messageEnd.value = msg;
 
-                items.forEach(it => values.set(it, old.has(it) ? old.get(it) : 50));
+                // Attempt to restore values if possible
+                // Note that theoretically we would need to store all group.item name keys along with values to properly match everything
+                // BUT as we are passing values in a URL, we want to keep it as small as possible
+                // Previous values are mapped as...
+                // G=#,I=#,val1,val2,val3,val4 etc.etc.
+                // where #G is number of groups, #I is total number of items, and then values across all items
+
+                if (existingValuesParam.Length > 0) {
+                    const allValues = [];
+                    let groupCount = null;
+                    let itemCount = null;
+
+                    const parts = str.split('.').map(s => s.trim()).filter(Boolean);
+
+                    let isValid = false;
+                    if (parts.length > 2) {
+                        // Extract G and I counts
+
+                        if (parts[0].startsWith('G~')) {
+                            groupCount = parseInt(parts[0].slice(2), 10);
+
+                            if (Number.isSafeInteger(groupCount)) {
+                                if (parts[1].startsWith('I~')) {
+                                    itemCount = parseInt(parts[1].slice(2), 10);
+
+                                    if (isSafeInteger(itemCount)) {
+                                        for (let i = 2; i < parts.length; i++) {
+                                            // Remaining values assumed to be numeric
+                                            const num = parseInt(parts[i], 10);
+                                            if (Number.isSafeInteger(num) && (num >= 0 && num <= 100))
+                                                allValues.push(num);
+                                            else
+                                                break;
+                                        }
+
+                                        isValid = itemCount !== null && allValues.length === itemCount;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (isValid) {
+                        // Populate saved values
+                    }
+                }
 
                 rebuildAll();
             });
 
-            // defaults
-            const defaults = [
-                {
-                    id: 'Default',
-                    value: {
-                        title: 'Test#Title',
-                        data: ['Test Group=One, Two, Three',
-                            'Another Group=A, B, C, D, E'],
-                        flattenedData: ''
+            // Default data lookup
+            const defaultData = {
+                chartData: [
+                    {
+                        id: 'Default',
+                        value: {
+                            title: 'Radar-o-Matatron#Chart Maker#Extraordinaire!',
+                            data: ['I like the=Colours, ',
+                                'Another Group=A, B, C, D, E'],
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'PF-R',
+                        value: {
+                            title: 'Play Fighting',
+                            data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.',
+                                'Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal',
+                                'Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain',
+                                'Physical Harm=Biting, Scratching, Bruises',
+                                'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
+                                'Psychological=Degradation, Praise',
+                                'Dangerous=Chokes and#Strangles, Breath Play'
+                            ],
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'Play',
+                        value: {
+                            title: 'General Play',
+                            data: ['Sensory=Impact, Strokes, Tickles, Sensory#Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
+                                'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative#Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                                'Toys=Vibrators, Dildos, Butt Plus',
+                                'Restraint=Rope, Chains, Spreader Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
+                                'Breath Play=Chocking, Strangling, Smothering, Hand over#Nose, Hand over#Mouth, Postural',
+                                'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
+                                'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
+                                'Misc.=Allergies, Lube'
+                            ],
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'Persona',
+                        value: {
+                            title: 'Persona & Preferences',
+                            data: ['Head Space=Pet Play, Age Play',
+                                'Servitude=Service, High Protocol, Worship, Chores, Homework',
+                                'Humiliation=Public Humiliation, Embarrassment, Cuckolding, Chastity, Financial#Domination',
+                                'Persona=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Voyeur, Exhibitionist, Primal',
+                                'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior#Modification',
+                                'Theatrics=Role Play, Scenes',
+                                'Words=Dirty Talk, Verbal#Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
+                            ],
+                            flattenedData: ''
+                        }
                     }
-                },
-                {
-                    id: 'PF-R',
-                    value: {
-                        title: 'Play Fighting',
-                        data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.',
-                            'Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal',
-                            'Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain',
-                            'Physical Harm=Biting, Scratching, Bruises',
-                            'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
-                            'Psychological=Degradation, Praise',
-                            'Dangerous=Chokes and#Strangles, Breath Play'
-                        ],
-                        flattenedData: ''
-                    }
-                },
-                {
-                    id: 'Play',
-                    value: {
-                        title: 'General Play',
-                        data: ['Sensory=Impact, Strokes, Tickles, Sensory#Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
-                            'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative#Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
-                            'Toys=Vibrators, Dildos, Butt Plus',
-                            'Restraint=Rope, Chains, Spreader Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
-                            'Breath Play=Chocking, Strangling, Smothering, Hand over#Nose, Hand over#Mouth, Postural',
-                            'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
-                            'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
-                            'Misc.=Allergies, Lube'
-                        ],
-                        flattenedData: ''
-                    }
-                },
-                {
-                    id: 'Persona',
-                    value: {
-                        title: 'Persona & Preferences',
-                        data: ['Head Space=Pet Play, Age Play',
-                            'Servitude=Service, High Protocol, Worship, Chores, Homework',
-                            'Humiliation=Public Humiliation, Embarrassment, Cuckolding, Chastity, Financial#Domination',
-                            'Persona=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Voyeur, Exhibitionist, Primal',
-                            'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior#Modification',
-                            'Theatrics=Role Play, Scenes',
-                            'Words=Dirty Talk, Verbal#Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
-                        ],
-                        flattenedData: ''
-                    }
-                }
-            ];
+                ],
 
-            const defaultsAxisLabels = [
-                { id: 'None', description: '% values', value: '' },
-                { id: 'EmojiSmiles', description: 'Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
-                { id: 'EmojiHealth', description: 'Health 🤢😷🤒🙂😃', value: '🤢,😷,🤒,🙂,😃' },
-                { id: 'EmojiHearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
-                { id: 'EmojiMoon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
-                { id: 'EmojiThumbs', description: 'Thumbs 👍🤔👎', value: '👎,🤔,👍' },
-                { id: 'EmojiTThumbs', description: 'Thoughtful Thumbs 👍👎', value: '👎,👍' },
-                { id: 'EmojiTraffic', description: 'Traffic Lights 🚦', value: '🔴,🟡,🟢' },
-                { id: '10s', description: '10s %', value: '0%,10%,20%,30%,40%,50%,60%,70%,80%,90%,100%' },
-                { id: '20s', description: '20s %', value: '0%,20%,40%,60%,80%,100%' },
-                { id: '50s', description: '30s %', value: '0%,50%,100%' },
-                { id: 'YN', description: 'Yes & No', value: 'No,Yes' },
-                { id: 'TF', description: 'True & False', value: 'False,True' }
-            ];
+                axisLabels: [
+                    { id: 'None', description: '% values', value: '' },
+                    { id: 'EmojiSmiles', description: 'Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
+                    { id: 'EmojiHealth', description: 'Health 🤢😷🤒🙂😃', value: '🤢,😷,🤒,🙂,😃' },
+                    { id: 'EmojiHearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
+                    { id: 'EmojiMoon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
+                    { id: 'EmojiThumbs', description: 'Thumbs 👍🤔👎', value: '👎,🤔,👍' },
+                    { id: 'EmojiTThumbs', description: 'Thoughtful Thumbs 👍👎', value: '👎,👍' },
+                    { id: 'EmojiTraffic', description: 'Traffic Lights 🚦', value: '🔴,🟡,🟢' },
+                    { id: '10s', description: '10s %', value: '0%,10%,20%,30%,40%,50%,60%,70%,80%,90%,100%' },
+                    { id: '20s', description: '20s %', value: '0%,20%,40%,60%,80%,100%' },
+                    { id: '50s', description: '30s %', value: '0%,50%,100%' },
+                    { id: 'YN', description: 'Yes & No', value: 'No,Yes' },
+                    { id: 'TF', description: 'True & False', value: 'False,True' }
+                ],
 
-            const defaultMessages = [
-                { id: 'None', value: '' },
-                { id: 'from', value: '#is happy to receive this#from' },
-                { id: 'do', value: '#is happy to do this#to' },
-                { id: 'with', value: '#is happy to do this#with' }
-            ];
+                messages: [
+                    { id: 'None', value: '' },
+                    { id: 'from', value: '#is happy to receive this#from' },
+                    { id: 'do', value: '#is happy to do this#to' },
+                    { id: 'with', value: '#is happy to do this#with' }
+                ]
+            }
 
             function addPlaceholderOption(select, text = '-- Select a template --') {
                 const option = document.createElement('option');
@@ -1358,35 +1445,32 @@
             }
 
             // Populate drop downs
-            const templateDropdown = document.getElementById('templates');
+            const templateDropdown = $('#templates');
             addPlaceholderOption(templateDropdown);
-            defaults.forEach(({ id, value }) => {
+            defaultData.chartData.forEach(({ id, value }) => {
                 const option = document.createElement('option');
                 option.value = id;
                 option.textContent = value.title.replace(/#/g, ' ');
                 templateDropdown.appendChild(option);
             });
 
-            const axisDropdown = document.getElementById('axisLabelDefaults');
+            const axisDropdown = $('#axisLabelDefaults');
             addPlaceholderOption(axisDropdown);
-            defaultsAxisLabels.forEach(({ description, value }) => {
+            defaultData.axisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = description;
                 axisDropdown.appendChild(option);
             });
 
-            // Populate drop downs
-            const messageDropDown = document.getElementById('messageTemplates');
+            const messageDropDown = $('#messageTemplates');
             addPlaceholderOption(messageDropDown);
-            defaultMessages.forEach(({ id, value }) => {
+            defaultData.messages.forEach(({ id, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = value.replace(/#/g, ' ');
                 messageDropDown.appendChild(option);
             });
-            // init
-            //rebuildAll();
         })();
     </script>
 </body>
