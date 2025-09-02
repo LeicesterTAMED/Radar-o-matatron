@@ -11,6 +11,10 @@
     URLs:
         GitHub: https://github.com/LeicesterTAMED/Radar-o-matatron
         Pages:  https://leicestertamed.github.io/Radar-o-matatron/rom.html
+
+    ToDo:
+        Pass chart settings in parameters
+        Flag for image logo to include in chart
 -->
 
 <head>
@@ -107,6 +111,10 @@
             min-height: 130px;
             white-space: pre;
             line-height: 1.35
+        }
+
+        .title {
+            text-align: center; 
         }
 
         .row {
@@ -283,13 +291,13 @@
     <div id="toast" class="toast">
     </div>
 
-    <img id="SockGoblin" src="SockGoblin.png" alt="Decorative" class="angled-image">
+    <img id="chartLogo" src="images/SockGoblin.png" alt="Decorative" class="angled-image">
 
     <div class="wrap">
         <div class="panel">
-            <div style="text-align: center; font-size: 24px;">Radar-o-Matatron</div>
-            <div style="text-align: center; font-size: 10px; font-style: italic;">The chart maker with an
-                overcomplicated name!</div>
+            <div class="title" style="font-size: 24px;">Radar-o-Matatron</div>
+            <div class="title" style="font-size: 10px; font-style: italic;">The chart maker with an overcomplicated name!</div>
+            <div class="title" style="font-size: 18px;">Kinky Edition</div>
             <div id="canvasButtons"
                 style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
                 <button id="copyBtn" style="white-space: nowrap;">📋 Copy to clipboard</button>
@@ -415,6 +423,7 @@
             let axis;
 
             const ui = {
+                chartLogo: $('#chartLogo'),
                 chartData: $('#data'),
                 title: $('#title'),
                 axisLabels: $('#axisLabels'),
@@ -672,7 +681,7 @@
                 const showPolygonGrid = ui.gridStyle.value === 'polygon';
 
                 ctx.save();
-                const img = document.getElementById('SockGoblin');
+                const img = ui.chartLogo;
                 const scale = 150 / img.naturalWidth;
                 const scaledHeight = img.naturalHeight * scale;
                 ctx.drawImage(img, ui.canvas.width - 160, 10, 150, scaledHeight);
@@ -1060,6 +1069,7 @@
             ui.messageStart.addEventListener('input', debounce(draw, 100));
             ui.messageCore.addEventListener('input', debounce(draw, 100));
             ui.messageEnd.addEventListener('input', debounce(draw, 100));
+            ui.chartLogo.addEventListener('load', draw); // --- Redraw on image load (so appears in chart, will be missing at start)
 
             window.addEventListener('resize', debounce(draw, 60), { passive: true });
 
@@ -1141,12 +1151,6 @@
 
                 setToast('✅ Image saved - check your downloads folder.');
             });
-
-            // --- Redraw on image load (so appears in chart)
-            $('#SockGoblin').addEventListener('load', () => {
-                draw();
-            });
-
 
             // --- Share chart link
             $('#shareChart').addEventListener('click', () => {
@@ -1355,7 +1359,7 @@
                 rebuildAll();
             });
 
-            // Default data lookup
+            // Default data definitions
             const defaultData = {
                 chartData: [
                     {
