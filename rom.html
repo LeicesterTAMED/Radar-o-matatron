@@ -558,15 +558,29 @@
                 //}
             }
 
+            let savedValues = null;
+
             // --- Controls
             function buildControls() {
-                // When we rebuild the controls - the previous values may or may not be there - we try re-populate them best we can
-                const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
-                itemValues.clear();
+                // If we have savedValues - likely from initial page load and saved values in URL - so we use that
+                // else when we rebuild the controls - the previous values may or may not be there - we try re-populate them best we can
 
-                allItems.forEach(it => {
-                    itemValues.set(it, old.has(it.key) ? old.get(it.key) : 50);
-                });
+                if (savedValues == null) {
+                    const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
+                    itemValues.clear();
+
+                    allItems.forEach(it => {
+                        itemValues.set(it, old.has(it.key) ? old.get(it.key) : 50);
+                    });
+                }
+                else
+                {
+                    let counter = 0;
+                    allItems.forEach(it => {
+                        itemValues.set(it, savedValues[counter++]);
+                    });
+                    savedValues = null;
+                }
 
                 ui.controls.innerHTML = '';
                 groups.forEach(g => {
@@ -582,7 +596,7 @@
 
                         const left = document.createElement('div');
                         const lab = document.createElement('label');
-                        lab.textContent = item.value.replace(/#/g, ' ');
+                        lab.textContent = item.value.replaceAll('#', ' ');
                         left.appendChild(lab);
 
                         const right = document.createElement('div');
@@ -1065,7 +1079,6 @@
                 allItems = groups.flatMap(g => g.items);
                 computeAngles();
                 assignColors();
-                console.log("HERE " + ui.axisLabels.value);
                 axis = parseAxisLabels(ui.axisLabels.value);
                 buildControls();
                 draw();
@@ -1178,8 +1191,7 @@
                     defaultData.chartData.forEach(it => it.value.flattenedData = it.value.data.join(';'));
 
                 // Data combined into equivalent of single line with ; separators
-                let data = ui.chartData.value.replace(/\n/g, ';');
-
+                let data = ui.chartData.value.replaceAll('\n', ';');
                 // Check to see if the axisText matches any of the defaults, if so use the id
                 // Reminder that even if someone selected text from a template, it's possible they modified it
                 let matchedDefault = defaultData.chartData.find(item => item.value.flattenedData === data);
@@ -1187,20 +1199,19 @@
                     data = matchedDefault.id;
                 // else leave data alone, the string contains the data definition
 
-                // Title is usually short, don't faff around with codes, just include the thing and helps with URL readability
-                //// Attempt to hunt down Title - the code is much smaller than the title probably is
-                //// matchedDefault = defaults.find(item => item.value.title === title);
-                //// if (matchedDefault)
-                ////     title = matchedDefault.id;
-
                 let axisLabels = ui.axisLabels.value.trim();
 
                 matchedDefault = defaultData.axisLabels.find(item => item.value === axisLabels);
                 if (matchedDefault)
                     axisLabels = matchedDefault.id;
 
-                const encodedTitle = encodeURIComponent(ui.title.value.trim());
-                const encodedData = encodeURIComponent(data); //).replace(/\n+/g, ';'));
+                // Title is usually short, don't faff around with codes, just include the thing and helps with URL readability
+                //// Attempt to hunt down Title - the code is much smaller than the title probably is
+                //// matchedDefault = defaults.find(item => item.value.title === title);
+                //// if (matchedDefault)
+                ////     title = matchedDefault.id;
+                const encodedTitle = encodeURIComponent(ui.title.value.trim().replaceAll(' ', '.'));    // Replace space with . to make more readable in URL, assuming . not used
+                const encodedData = encodeURIComponent(data);
                 const encodedAxis = encodeURIComponent(axisLabels);
                 const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim());
                 const encodedMessageCore = encodeURIComponent(ui.messageCore.value.trim());
@@ -1209,10 +1220,12 @@
                 // Values
                 // If ALL values are default, don't bother (e.g. sharing a fresh graph)
                 const numGroups = groups.length;
-                const numItems = itemValues.size;
+                const numItems = allItems.length;
                 let valueList;
-                if (numGroups > 0 && numItems > 0) {
-                    valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + [...itemValues.values()].join('.');
+
+                if (numGroups > 0 && numItems > 0
+                    && itemValues.size > 0) { // Only define chart data if any itemValues have been defined - else
+                    valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + allItems.map(it => itemValues.get(it) ?? 50).join('.');
                 }
 
                 // Build full URL
@@ -1220,7 +1233,7 @@
 
                 const rotateLabelsParam = !ui.rotateLabels.checked ? 'rl=0' : null;
                 const showValuesParam = !ui.showValues.checked ? 'sv=0' : null;
-                const rotateValuesParam = !ui.rotateValueLabels.checked ? 'rv=0' : null; 
+                const rotateValuesParam = !ui.rotateValueLabels.checked ? 'rv=0' : null;
                 const valuesOnEdgeParam = !ui.placeValueLabelsAtEdge.checked ? 'voe=0' : null;
 
                 const params = [
@@ -1291,22 +1304,13 @@
                 }
                 ui.axisLabels.value = axisParam;
 
-                // Title
-                // If a default id exists for the title, we use that default, else we just keep as is
-                // if (titleParam.length > 0) {
-                //    dataItem = defaults.find(item => item.id === titleParam)?.value;
-                //     if (dataItem)
-                //         titleParam = dataItem.title;
-                // }
-
-
                 // Chart data
                 if (dataParam.length == 0)
                     dataParam = 'Default'; // default if not specified
 
                 // If contains a '=' then its a custom definition, else we look it up
                 if (dataParam.includes('=')) {
-                    dataParam = dataParam.replace(/;/g, '\n');
+                    dataParam = dataParam.replaceAll(';', '\n');
                 }
                 else {
                     dataItem = defaultData.chartData.find(item => item.id === dataParam)?.value;
@@ -1323,7 +1327,15 @@
                         logoParam = dataItem.logo;
                 }
 
-                ui.title.value = titleParam;
+
+                // Title
+                // If a default id exists for the title, we use that default, else we just keep as is
+                // if (titleParam.length > 0) {
+                //    dataItem = defaults.find(item => item.id === titleParam)?.value;
+                //     if (dataItem)
+                //         titleParam = dataItem.title;
+                // }
+                ui.title.value = titleParam.replaceAll('.', ' ');       // Replace back title . with spaces in URL
                 ui.chartData.value = dataParam;
 
                 // Logo
@@ -1376,12 +1388,12 @@
                 // G=#,I=#,val1,val2,val3,val4 etc.etc.
                 // where #G is number of groups, #I is total number of items, and then values across all items
 
-                if (existingValuesParam.Length > 0) {
+                if (existingValuesParam.length > 0) {
                     const allValues = [];
                     let groupCount = null;
                     let itemCount = null;
 
-                    const parts = str.split('.').map(s => s.trim()).filter(Boolean);
+                    const parts = existingValuesParam.split('.').map(s => s.trim()).filter(Boolean);
 
                     let isValid = false;
                     if (parts.length > 2) {
@@ -1394,7 +1406,7 @@
                                 if (parts[1].startsWith('I~')) {
                                     itemCount = parseInt(parts[1].slice(2), 10);
 
-                                    if (isSafeInteger(itemCount)) {
+                                    if (Number.isSafeInteger(itemCount)) {
                                         for (let i = 2; i < parts.length; i++) {
                                             // Remaining values assumed to be numeric
                                             const num = parseInt(parts[i], 10);
@@ -1412,7 +1424,8 @@
                     }
 
                     if (isValid) {
-                        // Populate saved values
+                        // Populate saved values, will be picked up when controls are generated
+                        savedValues = allValues;
                     }
                 }
 
@@ -1451,7 +1464,7 @@
                         }
                     },
                     {
-                        id: 'PF-R',
+                        id: 'PF',
                         value: {
                             title: 'Play Fighting',
                             data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.',
@@ -1550,7 +1563,7 @@
             defaultData.chartData.forEach(({ id, value }) => {
                 const option = document.createElement('option');
                 option.value = id;
-                option.textContent = value.title.replace(/#/g, ' ');
+                option.textContent = value.title.replaceAll('#', ' ');
                 templateDropdown.appendChild(option);
             });
 
@@ -1568,7 +1581,7 @@
             defaultData.messages.forEach(({ id, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
-                option.textContent = value.replace(/#/g, ' ');
+                option.textContent = value.replaceAll('#', ' ');
                 messageDropDown.appendChild(option);
             });
         })();
