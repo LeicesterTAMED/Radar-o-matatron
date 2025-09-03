@@ -11,6 +11,7 @@
     URLs:
         GitHub: https://github.com/LeicesterTAMED/Radar-o-matatron
         Pages:  https://leicestertamed.github.io/Radar-o-matatron/rom.html
+        LeicesterTAMED: https://fetlife.com/LeicesterTAMED
 
     ToDo:
         Pass chart settings in parameters
@@ -114,7 +115,7 @@
         }
 
         .title {
-            text-align: center; 
+            text-align: center;
         }
 
         .row {
@@ -291,12 +292,14 @@
     <div id="toast" class="toast">
     </div>
 
-    <img id="chartLogo" src="images/SockGoblin.png" alt="Decorative" class="angled-image">
+    <img id="siteLogo" src="images/SiteLogo.png" alt="Site Logo" class="angled-image">
+    <img id="chartLogo" src="images/SockGoblin.png" alt="Chart Logo" style="display: none">
 
     <div class="wrap">
         <div class="panel">
             <div class="title" style="font-size: 24px;">Radar-o-Matatron</div>
-            <div class="title" style="font-size: 10px; font-style: italic;">The chart maker with an overcomplicated name!</div>
+            <div class="title" style="font-size: 10px; font-style: italic;">The chart maker with an overcomplicated
+                name!</div>
             <div class="title" style="font-size: 18px;">Kinky Edition</div>
             <div id="canvasButtons"
                 style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
@@ -375,6 +378,12 @@
                 </div>
             </div>
         </div>
+
+        <div class="panel">
+            <div class="title" style="font-size: 16px;">(c) 2025 <a href="https://fetlife.com/LeicesterTAMED"
+                    aria-label="Link to Leicester TAMED fetlife page" target="_blank"
+                    rel="noopener noreferrer">Leicester T.A.M.E.D.</a></div>
+        </div>
     </div>
 
     <script>
@@ -423,6 +432,7 @@
             let axis;
 
             const ui = {
+                siteLogo: $('#siteLogo'),
                 chartLogo: $('#chartLogo'),
                 chartData: $('#data'),
                 title: $('#title'),
@@ -1088,6 +1098,14 @@
                 titleParam = dataItem.title;
                 dataParam = dataItem.data.map(line => line.trim()).join('\n');
 
+                // Logo
+                let logoSrc = (defaultData.logos.find(item => item.id === dataItem.logo.toLowerCase())?.filename);
+
+                if (!logoSrc)
+                    logoSrc = 'images/SiteLogo.png';
+
+                ui.chartLogo.src = 'images/' + logoSrc;
+
                 document.getElementById('title').value = titleParam;
                 document.getElementById('data').value = dataParam;
 
@@ -1200,6 +1218,11 @@
                 // Build full URL
                 const baseUrl = window.location.origin + window.location.pathname;
 
+                const rotateLabelsParam = !ui.rotateLabels.checked ? 'rl=0' : null;
+                const showValuesParam = !ui.showValues.checked ? 'sv=0' : null;
+                const rotateValuesParam = !ui.rotateValueLabels.checked ? 'rv=0' : null; 
+                const valuesOnEdgeParam = !ui.placeValueLabelsAtEdge.checked ? 'voe=0' : null;
+
                 const params = [
                     encodedTitle && `title=${encodedTitle}`,
                     encodedData && `data=${encodedData}`,
@@ -1207,6 +1230,10 @@
                     encodedMessageStart && `start=${encodedMessageStart}`,
                     encodedMessageCore && `message=${encodedMessageCore}`,
                     encodedMessageEnd && `end=${encodedMessageEnd}`,
+                    rotateLabelsParam,
+                    showValuesParam,
+                    rotateValuesParam,
+                    valuesOnEdgeParam,
                     valueList
                 ].filter(Boolean).join('&');
 
@@ -1227,16 +1254,28 @@
                     });
             });
 
+            function isTrue(value) {
+                const normalized = String(value).toLowerCase().trim();
+                return ['true', 'yes', '1', 't', 'y'].includes(normalized);
+            }
+
+
             // --- Processing of parameters etc. after page loaded
             window.addEventListener('DOMContentLoaded', () => {
                 const params = new URLSearchParams(window.location.search);
                 let dataParam = params.get('data') || '';     // default or overrides values if contains a =
                 let axisParam = params.get('axis') || '';     // axis id or overrides values if contains a ,
                 let titleParam = params.get('title') || '';
+                let logoParam = params.get('logo')?.toLowerCase() || '';
                 let messageStartParam = params.get('start') || '';
                 let messageCoreParam = params.get('message') || '';
                 let messageEndParam = params.get('end') || '';
                 let existingValuesParam = params.get('values') || '';
+                let rotateLabelsParam = params.get('rl') || 'true';     // Rotate Labels
+                let showValuesParam = params.get('sv') || 'true';       // Show Values
+                let rotateValuesParam = params.get('rv') || 'true';     // Rotate Values
+                let valuesOnEdgeParam = params.get('voe') || 'true';    // Values On Edge
+
                 let dataItem;
 
                 let matchedDefault;
@@ -1260,6 +1299,7 @@
                 //         titleParam = dataItem.title;
                 // }
 
+
                 // Chart data
                 if (dataParam.length == 0)
                     dataParam = 'Default'; // default if not specified
@@ -1278,10 +1318,23 @@
                         titleParam = dataItem.title;
 
                     dataParam = dataItem.data.map(line => line.trim()).join('\n');
+
+                    if (logoParam = '')
+                        logoParam = dataItem.logo;
                 }
 
                 ui.title.value = titleParam;
                 ui.chartData.value = dataParam;
+
+                // Logo
+                let logoSrc = '';
+                if (logoParam.length > 0)
+                    logoSrc = (defaultData.logos.find(item => item.id === logoParam)?.filename);
+
+                if (!logoSrc)
+                    logoSrc = 'SiteLogo.png';
+
+                ui.siteLogo.src = 'images/' + logoSrc;
 
                 // Message
                 // Any message with a space in is treated as a custom message, else we look it up
@@ -1308,6 +1361,13 @@
                     if (hasCoreMessage)
                         msg = 'Person B';
                 ui.messageEnd.value = msg;
+
+                // Extra options - most of the time these will be using defaults
+
+                ui.rotateLabels.checked = isTrue(rotateLabelsParam);
+                ui.showValues.checked = isTrue(showValuesParam);
+                ui.rotateValueLabels.checked = isTrue(rotateValuesParam);
+                ui.placeValueLabelsAtEdge.checked = isTrue(valuesOnEdgeParam);
 
                 // Attempt to restore values if possible
                 // Note that theoretically we would need to store all group.item name keys along with values to properly match everything
@@ -1361,13 +1421,32 @@
 
             // Default data definitions
             const defaultData = {
+                defaultLogo: 'TAMED-Logo.png',
+                logos: [
+                    { id: 'default', filename: 'TAMED-Logo.png' },
+                    { id: 'logo', filename: 'TAMED-Logo.png' },
+                    { id: 'candle', filename: 'TAMED-Logo-Candle.png' },
+                    { id: 'flogger', filename: 'TAMED-Logo-Flogger.png' },
+                    { id: 'pp', filename: 'TAMED-Logo-PP.png' },
+                    { id: 'rope', filename: 'TAMED-Logo-Rope.png' },
+                    { id: 'ropetinsel', filename: 'TAMED-Logo-Rope-Tinsel.png' },
+                    { id: 'ropexmas', filename: 'TAMED-Logo-Rope-XMas.png' },
+                    { id: 'zap', filename: 'TAMED-Logo-Zap.png' },
+                    { id: 'playfighting', filename: 'SockGoblin.png' },
+                    { id: 'sockgoblin', filename: 'SockGoblin.png' }
+                ],
                 chartData: [
                     {
                         id: 'Default',
                         value: {
-                            title: 'Radar-o-Matatron#Chart Maker#Extraordinaire!',
-                            data: ['I like the=Colours, ',
-                                'Another Group=A, B, C, D, E'],
+                            title: 'Radar-o-Matatron#Chart Maker#Extraordinaire!#Example',
+                            data: ['Nature=Hiking, Forrest, Jungle, Mountains, Lakes, Rivers, Waterfalls, Tundra, Sandy, Snowy, Desert, Caves',
+                                'Media=Books, Films, Games, Music, Art, Photography',
+                                'Music=Pop, Rock, Electronic, HipHop, Country, Jazz, Classical, Other',
+                                'Food=Chinese, Indian, Italian, Mexican, Japanese, Korean, Thai, Vietnamese, English, Other',
+                                'Pets=Cats, Dogs, Fish, Birds, Reptiles, Other'
+                            ],
+                            logo: 'Logo',
                             flattenedData: ''
                         }
                     },
@@ -1383,6 +1462,7 @@
                                 'Psychological=Degradation, Praise',
                                 'Dangerous=Chokes and#Strangles, Breath Play'
                             ],
+                            logo: 'PlayFighting',
                             flattenedData: ''
                         }
                     },
@@ -1399,6 +1479,7 @@
                                 'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
                                 'Misc.=Allergies, Lube'
                             ],
+                            logo: 'Logo',
                             flattenedData: ''
                         }
                     },
@@ -1414,6 +1495,7 @@
                                 'Theatrics=Role Play, Scenes',
                                 'Words=Dirty Talk, Verbal#Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
                             ],
+                            logo: 'Logo',
                             flattenedData: ''
                         }
                     }
@@ -1421,13 +1503,22 @@
 
                 axisLabels: [
                     { id: 'None', description: '% values', value: '' },
-                    { id: 'EmojiSmiles', description: 'Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
-                    { id: 'EmojiHealth', description: 'Health 🤢😷🤒🙂😃', value: '🤢,😷,🤒,🙂,😃' },
+                    { id: 'EmojiAffection', description: 'Affection 😠😐🙂😗😚😘', value: '😠,😐,🙂,😗,😚,😘' },
+                    { id: 'EmojiBored', description: 'Bored? 😴😐🙂😄😂🤣', value: '😴,😐,🙂,😄,😂,🤣' },
+                    { id: 'EmojiCat', description: 'Cat 😿😾😼😺😻', value: '😿,😾,😼,😺,😻' },
+                    { id: 'EmojiHealth', description: 'Health 😵🤮🤢😷🤒🙂😃', value: '😵,🤮,🤢,😷,🤒,🙂,😃' },
                     { id: 'EmojiHearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
+                    { id: 'EmojiLight', description: 'Light Level 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
+                    { id: 'EmojiMedals', description: 'Medals 💩🥉🥈🥇🏆', value: '💩,🥉,🥈,🥇,🏆' },
                     { id: 'EmojiMoon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
-                    { id: 'EmojiThumbs', description: 'Thumbs 👍🤔👎', value: '👎,🤔,👍' },
-                    { id: 'EmojiTThumbs', description: 'Thoughtful Thumbs 👍👎', value: '👎,👍' },
+                    { id: 'EmojiPerson', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
+                    { id: 'EmojiSmiles', description: 'Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
+                    { id: 'EmojiTemperature', description: 'Temperature ❄️💧🔥', value: '❄️,💧,🔥' },
+                    { id: 'EmojiThumbs', description: 'Thumbs 👍👎', value: '👎,👍' },
+                    { id: 'EmojiTThumbs', description: 'Thoughtful Thumbs 👍🤔👎', value: '👎,🤔,👍' },
                     { id: 'EmojiTraffic', description: 'Traffic Lights 🚦', value: '🔴,🟡,🟢' },
+                    { id: 'EmojiWant', description: 'Want 😞😒😐🤔🙂😍', value: '😞,😒,😐,🤔,🙂,😍' },
+                    { id: 'EmojiWeather', description: 'Weather ⛈️🌧️🌦️☁️🌥️🌤️☀️', value: '⛈️,🌧️,🌦️,☁️,🌥️,🌤️,☀️' },
                     { id: '10s', description: '10s %', value: '0%,10%,20%,30%,40%,50%,60%,70%,80%,90%,100%' },
                     { id: '20s', description: '20s %', value: '0%,20%,40%,60%,80%,100%' },
                     { id: '50s', description: '30s %', value: '0%,50%,100%' },
@@ -1437,8 +1528,9 @@
 
                 messages: [
                     { id: 'None', value: '' },
-                    { id: 'from', value: '#is happy to receive this#from' },
                     { id: 'do', value: '#is happy to do this#to' },
+                    { id: 'from', value: '#is happy to receive this#from' },
+                    { id: 'tastes', value: '#has tastes that they want#you to know about' },
                     { id: 'with', value: '#is happy to do this#with' }
                 ]
             }
