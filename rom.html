@@ -944,7 +944,7 @@
 
                             // Flip upside-down labels for readability depending on position
                             let flipped = false;
-                            if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2) {
+                            if (tangentAngle >= Math.PI / 2 && tangentAngle <= (3 * Math.PI) / 2) {
                                 ctx.rotate(Math.PI);
                                 flipped = true;
                             }
@@ -1103,7 +1103,7 @@
             $('#placeValueLabelsAtEdge').addEventListener('change', draw);
 
             const previousItemValues = new Map();
-            
+
             $('#templates').addEventListener('change', () => {
                 const selectedValue = templates.value;
 
@@ -1139,11 +1139,9 @@
                 // Attempt to restore values from previous save
                 const previousSave = previousItemValues.get(chart.id);
 
-                if (previousSave) {
+                if (previousSave)
                     // Load previous values
                     savedValues = previousSave;
-                    console.log("LOADED " + savedValues);
-                }
 
                 rebuildAll();
             });
@@ -1251,9 +1249,9 @@
                 let valueList;
 
                 if (numGroups > 0 && numItems > 0 && itemValues.size > 0) { // Only define chart data if any itemValues have been defined - else
-                        // Check if all values are default - ignore if that is the case
-                        if ([...itemValues.values()].some(val => val !== 50))
-                            valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + allItems.map(it => itemValues.get(it) ?? 50).join('.');
+                    // Check if all values are default - ignore if that is the case
+                    if ([...itemValues.values()].some(val => val !== 50))
+                        valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + allItems.map(it => itemValues.get(it) ?? 50).join('.');
                 }
 
                 // Build full URL
@@ -1541,15 +1539,24 @@
                         }
                     },
                     {
-                        id: 'SadistMasochist',
+                        id: 'Sadist',
                         value: {
-                            title: 'Sadist <-> Masochist',
-                            data: ['I like causing=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Control, Reaction, Sensory Denial, Sensory#Overstimulation',
-                                'Sadist environment=Private, Public, CNC',
-                                'Sadist dividend=Sexual arousal, Partners Experience, Psychological#Satisfaction',
-                                'I like receiving=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Control, Reaction, Sensory Denial, Sensory#Overstimulation',
-                                'Masochist environment=Private, Public, CNC',
-                                'Masochist dividend=Sexual arousal, Spiritual Catharsis, Emotional Release, Endorphin Junky, Brat, Partners Experience, Psychological#Satisfaction, Pushing Limits, Role Play, Powerlessness'
+                            title: 'Sadist',
+                            data: ['Causing=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Sensory#Denial, Sensory#Overload, Control, Reaction, Role Play',
+                                'Where=Private, Public, BDSM#Clubs, CNC',
+                                'Dividend=Sexual Arousal, Partners Experience, Psychological#Satisfaction'
+                            ],
+                            logo: 'Logo',
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'Masochist',
+                        value: {
+                            title: 'Masochist',
+                            data: ['Receiving=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Sensory#Denial, Sensory#Overload, Control, Reaction, Role Play',
+                                'Where=Private, Public, BDSM#Clubs, CNC',
+                                'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional#Release, Endorphin#Junky, Brat, Partners#Experience, Psychological#Satisfaction, Powerlessness, Challenging#Limits'
                             ],
                             logo: 'Logo',
                             flattenedData: ''
