@@ -1205,39 +1205,47 @@
             });
 
             function findChart() {
-                // Check if defaults have flattened variants of data
+                // Check if defaults have flattened variants of data yet, and if not, do it!
                 if (defaultData.chartData[0].value.flattenedData === '')
                     // Create a flattened version of data for when checking text below for link creation
                     defaultData.chartData.forEach(it => it.value.flattenedData = it.value.data.join(';'));
 
                 // Data combined into equivalent of single line with ; separators
                 let data = ui.chartData.value.replaceAll('\n', ';');
+
                 // Check to see if the axisText matches any of the defaults, if so use the id
                 // Reminder that even if someone selected text from a template, it's possible they modified it
-                return defaultData.chartData.find(item => item.value.flattenedData === data);
+                return { chart: defaultData.chartData.find(item => item.value.flattenedData === data), searchData: data };
             }
 
             // --- Share chart link
             $('#shareChart').addEventListener('click', () => {
-                let matchedDefault = findChart();
-                if (matchedDefault)
-                    data = matchedDefault.id;
+                // Data combined into equivalent of single line with ; separators
+                let matchedDefaultChart = findChart();
+                if (matchedDefaultChart.chart)
+                    chart = matchedDefaultChart.chart.id;
+                else
+                    chart = data;
+
                 // else leave data alone, the string contains the data definition
+                const encodedData = encodeURIComponent(chart);
+
+                // Don't bother with a title if it's same as chart default
+                let encodedTitle;
+                console.log(matchedDefaultChart);
+                if (!matchedDefaultChart.chart || ui.title.value != matchedDefaultChart.chart?.value.title) {
+                    encodedTitle = encodeURIComponent(ui.title.value.trim().replaceAll(' ', '.'));    // Replace space with . to make more readable in URL, assumes . not used
+                }
 
                 let axisLabels = ui.axisLabels.value.trim();
+                let matchingAxisLabelsDefault = defaultData.axisLabels.find(item => item.value === axisLabels);
+                if (matchingAxisLabelsDefault)
+                    axisLabels = matchingAxisLabelsDefault.id;
+                // Don't bother with axis labels if we are using the default
+                let encodedAxis;
+                if (axisLabels != 'Smiles')
+                    encodedAxis = encodeURIComponent(axisLabels);
 
-                matchedDefault = defaultData.axisLabels.find(item => item.value === axisLabels);
-                if (matchedDefault)
-                    axisLabels = matchedDefault.id;
-
-                // Title is usually short, don't faff around with codes, just include the thing and helps with URL readability
-                //// Attempt to hunt down Title - the code is much smaller than the title probably is
-                //// matchedDefault = defaults.find(item => item.value.title === title);
-                //// if (matchedDefault)
-                ////     title = matchedDefault.id;
-                const encodedTitle = encodeURIComponent(ui.title.value.trim().replaceAll(' ', '.'));    // Replace space with . to make more readable in URL, assumes . not used
-                const encodedData = encodeURIComponent(data);
-                const encodedAxis = encodeURIComponent(axisLabels);
                 const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim());
                 const encodedMessageCore = encodeURIComponent(ui.messageCore.value.trim());
                 const encodedMessageEnd = encodeURIComponent(ui.messageEnd.value.trim());
@@ -1264,7 +1272,7 @@
 
                 const params = [
                     encodedTitle && `title=${encodedTitle}`,
-                    encodedData && `data=${encodedData}`,
+                    encodedData && `chart=${encodedData}`,
                     encodedAxis && `axis=${encodedAxis}`,
                     encodedMessageStart && `start=${encodedMessageStart}`,
                     encodedMessageCore && `message=${encodedMessageCore}`,
@@ -1302,7 +1310,7 @@
             // --- Processing of parameters etc. after page loaded
             window.addEventListener('DOMContentLoaded', () => {
                 const params = new URLSearchParams(window.location.search);
-                let dataParam = params.get('data') || '';     // default or overrides values if contains a =
+                let chartParam = params.get('chart') || '';     // default or overrides values if contains a =
                 let axisParam = params.get('axis') || '';     // axis id or overrides values if contains a ,
                 let titleParam = params.get('title') || '';
                 let logoParam = params.get('logo')?.toLowerCase() || '';
@@ -1315,13 +1323,13 @@
                 let rotateValuesParam = params.get('rv') || 'true';     // Rotate Values
                 let valuesOnEdgeParam = params.get('voe') || 'true';    // Values On Edge
 
-                let dataItem;
+                let chartItem;
 
                 let matchedDefault;
 
                 // Axis
                 if (!axisParam || axisParam.length == 0)
-                    axisParam = defaultData.axisLabels.find(item => item.id === 'EmojiSmiles')?.value || '';  // default if nothing specified
+                    axisParam = defaultData.axisLabels.find(item => item.id === 'Smiles')?.value || '';  // default if nothing specified
                 else if (!axisParam.includes(',')) {
                     // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
                     matchedDefault = defaultData.axisLabels.find(item => item.id === axisParam);
@@ -1331,26 +1339,26 @@
                 ui.axisLabels.value = axisParam;
 
                 // Chart data
-                if (dataParam.length == 0)
-                    dataParam = 'Default'; // default if not specified
+                if (chartParam.length == 0)
+                    chartParam = 'Default'; // default if not specified
 
                 // If contains a '=' then its a custom definition, else we look it up
-                if (dataParam.includes('=')) {
-                    dataParam = dataParam.replaceAll(';', '\n');
+                if (chartParam.includes('=')) {
+                    chartParam = chartParam.replaceAll(';', '\n');
                 }
                 else {
-                    dataItem = defaultData.chartData.find(item => item.id === dataParam)?.value;
+                    chartItem = defaultData.chartData.find(item => item.id === chartParam)?.value;
 
-                    if (!dataItem)
-                        dataItem = defaultData.chartData.find(item => item.id === 'Default')?.value;
+                    if (!chartItem)
+                        chartItem = defaultData.chartData.find(item => item.id === 'Default')?.value;
 
                     if (titleParam.length == 0)
-                        titleParam = dataItem.title;
+                        titleParam = chartItem.title;
 
-                    dataParam = dataItem.data.map(line => line.trim()).join('\n');
+                    chartParam = chartItem.data.map(line => line.trim()).join('\n');
 
                     if (logoParam = '')
-                        logoParam = dataItem.logo;
+                        logoParam = chartItem.logo;
                 }
 
 
@@ -1362,7 +1370,7 @@
                 //         titleParam = dataItem.title;
                 // }
                 ui.title.value = titleParam.replaceAll('.', ' ');       // Replace back title . with spaces in URL
-                ui.chartData.value = dataParam;
+                ui.chartData.value = chartParam;
 
                 // Logo
                 let logoSrc = '';
@@ -1490,7 +1498,7 @@
                         }
                     },
                     {
-                        id: 'PF',
+                        id: 'PlayFighting',
                         value: {
                             title: 'Play Fighting',
                             data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.',
@@ -1506,7 +1514,7 @@
                         }
                     },
                     {
-                        id: 'Play',
+                        id: 'GeneralPlay',
                         value: {
                             title: 'General Play',
                             data: ['Sensory=Impact, Strokes, Tickles, Sensory#Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
@@ -1566,22 +1574,22 @@
 
                 axisLabels: [
                     { id: 'None', description: '% values', value: '' },
-                    { id: 'EmojiAffection', description: 'Affection 😠😐🙂😗😚😘', value: '😠,😐,🙂,😗,😚,😘' },
-                    { id: 'EmojiBored', description: 'Bored? 😴😐🙂😄😂🤣', value: '😴,😐,🙂,😄,😂,🤣' },
-                    { id: 'EmojiCat', description: 'Cat 😿😾😼😺😻', value: '😿,😾,😼,😺,😻' },
-                    { id: 'EmojiHealth', description: 'Health 😵🤮🤢😷🤒🙂😃', value: '😵,🤮,🤢,😷,🤒,🙂,😃' },
-                    { id: 'EmojiHearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
-                    { id: 'EmojiLight', description: 'Light Level 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
-                    { id: 'EmojiMedals', description: 'Medals 💩🥉🥈🥇🏆', value: '💩,🥉,🥈,🥇,🏆' },
-                    { id: 'EmojiMoon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
-                    { id: 'EmojiPerson', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
-                    { id: 'EmojiSmiles', description: 'Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
-                    { id: 'EmojiTemperature', description: 'Temperature ❄️💧🔥', value: '❄️,💧,🔥' },
-                    { id: 'EmojiThumbs', description: 'Thumbs 👍👎', value: '👎,👍' },
-                    { id: 'EmojiTThumbs', description: 'Thoughtful Thumbs 👍🤔👎', value: '👎,🤔,👍' },
-                    { id: 'EmojiTraffic', description: 'Traffic Lights 🚦', value: '🔴,🟡,🟢' },
-                    { id: 'EmojiWant', description: 'Want 😞😒😐🤔🙂😍', value: '😞,😒,😐,🤔,🙂,😍' },
-                    { id: 'EmojiWeather', description: 'Weather ⛈️🌧️🌦️☁️🌥️🌤️☀️', value: '⛈️,🌧️,🌦️,☁️,🌥️,🌤️,☀️' },
+                    { id: 'Affection', description: 'Affection 😠😐🙂😗😚😘', value: '😠,😐,🙂,😗,😚,😘' },
+                    { id: 'Bored', description: 'Bored? 😴😐🙂😄😂🤣', value: '😴,😐,🙂,😄,😂,🤣' },
+                    { id: 'Cat', description: 'Cat 😿😾😼😺😻', value: '😿,😾,😼,😺,😻' },
+                    { id: 'Health', description: 'Health 😵🤮🤢😷🤒🙂😃', value: '😵,🤮,🤢,😷,🤒,🙂,😃' },
+                    { id: 'Hearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
+                    { id: 'Light', description: 'Light Level 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
+                    { id: 'Medals', description: 'Medals 💩🥉🥈🥇🏆', value: '💩,🥉,🥈,🥇,🏆' },
+                    { id: 'Moon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
+                    { id: 'Person', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
+                    { id: 'Smiles', description: 'Smiles 😡😭😢😕😐🙂😁😃🤩', value: '😡,😭,😢,😕,😐,🙂,😁,😃,🤩' },
+                    { id: 'Temperature', description: 'Temperature ❄️💧🔥', value: '❄️,💧,🔥' },
+                    { id: 'Thumbs', description: 'Thumbs 👍👎', value: '👎,👍' },
+                    { id: 'TThumbs', description: 'Thoughtful Thumbs 👍🤔👎', value: '👎,🤔,👍' },
+                    { id: 'Traffic', description: 'Traffic Lights 🚦', value: '🔴,🟡,🟢' },
+                    { id: 'Want', description: 'Want 😞😒😐🤔🙂😍', value: '😞,😒,😐,🤔,🙂,😍' },
+                    { id: 'Weather', description: 'Weather ⛈️🌧️🌦️☁️🌥️🌤️☀️', value: '⛈️,🌧️,🌦️,☁️,🌥️,🌤️,☀️' },
                     { id: '10s', description: '10s %', value: '0%,10%,20%,30%,40%,50%,60%,70%,80%,90%,100%' },
                     { id: '20s', description: '20s %', value: '0%,20%,40%,60%,80%,100%' },
                     { id: '50s', description: '30s %', value: '0%,50%,100%' },
