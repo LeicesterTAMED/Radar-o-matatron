@@ -332,7 +332,7 @@
 
                 <div class="row">
                     <div>
-                        WARNING - changing options <i>may</i>> reset your chart data!<br /><br />
+                        Warning - changing templates will reset your chart data<br /><br />
                         Where you see # in any text, it is a placeholder where a new line will be inserted when
                         displayed on the chart. This can help with layout.
                     </div>
@@ -432,6 +432,7 @@
             let axis;
 
             const ui = {
+                toast: $('#toast'),
                 siteLogo: $('#siteLogo'),
                 chartLogo: $('#chartLogo'),
                 chartData: $('#data'),
@@ -565,16 +566,16 @@
                 // If we have savedValues - likely from initial page load and saved values in URL - so we use that
                 // else when we rebuild the controls - the previous values may or may not be there - we try re-populate them best we can
 
+                itemValues.clear();
+
                 if (savedValues == null) {
                     const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
-                    itemValues.clear();
 
                     allItems.forEach(it => {
                         itemValues.set(it, old.has(it.key) ? old.get(it.key) : 50);
                     });
                 }
-                else
-                {
+                else {
                     let counter = 0;
                     allItems.forEach(it => {
                         itemValues.set(it, savedValues[counter++]);
@@ -1101,26 +1102,37 @@
             $('#rotateValueLabels').addEventListener('change', draw);
             $('#placeValueLabelsAtEdge').addEventListener('change', draw);
 
+            const previousItemValues = new Map();
+
             $('#templates').addEventListener('change', () => {
                 const selectedValue = templates.value;
 
-                let dataItem = defaultData.chartData.find(item => item.id === selectedValue)?.value;
-                if (!dataItem)
-                    dataItem = defaultData.chartData.find(item => item.id === 'Default')?.value;
+                // save off mapped values in case we want them later (e.g. change back to this chart)
+                previousItemValues.set(chart)
 
-                titleParam = dataItem.title;
-                dataParam = dataItem.data.map(line => line.trim()).join('\n');
+                let chartItem = defaultData.chartData.find(chart => chart.id === selectedValue)?.value;
+                if (!chartItem)
+                    chartItem = defaultData.chartData.find(chart => chart.id === 'Default')?.value;
+
+                titleParam = chartItem.title;
+                dataParam = chartItem.data.map(line => line.trim()).join('\n');
 
                 // Logo
-                let logoSrc = (defaultData.logos.find(item => item.id === dataItem.logo.toLowerCase())?.filename);
+                let logoSrc = (defaultData.logos.find(item => item.id === chartItem.logo.toLowerCase())?.filename);
 
                 if (!logoSrc)
-                    logoSrc = 'images/SiteLogo.png';
+                    logoSrc = 'SiteLogo.png';
 
                 ui.chartLogo.src = 'images/' + logoSrc;
 
-                document.getElementById('title').value = titleParam;
-                document.getElementById('data').value = dataParam;
+                ui.title.value = titleParam;
+                ui.chartData.value = dataParam;
+
+                // Make sure existing items are cleared so no saved values are retained
+                // ToDo: Save to a map - can be restored if chart type is changed back again?
+                itemValues.clear();
+                // save off mapped values in case we want them later (e.g. change back to this chart)
+                previousItemValues.set(chart)
 
                 rebuildAll();
             });
@@ -1133,7 +1145,7 @@
 
             $('#messageTemplates').addEventListener('change', () => {
                 const msg = messageTemplates.value;
-                document.getElementById('messageCore').value = msg || '';
+                ui.messageCore.value = msg || '';
 
                 if (ui.messageStart.value.trim().length === 0 && msg.length > 0)
                     ui.messageStart.value = 'Person A';
@@ -1147,7 +1159,7 @@
             // --- Extra UI Functionality
 
             function setToast(message, duration = 3000) {
-                const toast = document.getElementById('toast');
+                const toast = ui.toast;
                 toast.textContent = message;
                 toast.style.opacity = '1';
 
@@ -1210,7 +1222,7 @@
                 //// matchedDefault = defaults.find(item => item.value.title === title);
                 //// if (matchedDefault)
                 ////     title = matchedDefault.id;
-                const encodedTitle = encodeURIComponent(ui.title.value.trim().replaceAll(' ', '.'));    // Replace space with . to make more readable in URL, assuming . not used
+                const encodedTitle = encodeURIComponent(ui.title.value.trim().replaceAll(' ', '.'));    // Replace space with . to make more readable in URL, assumes . not used
                 const encodedData = encodeURIComponent(data);
                 const encodedAxis = encodeURIComponent(axisLabels);
                 const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim());
@@ -1223,9 +1235,10 @@
                 const numItems = allItems.length;
                 let valueList;
 
-                if (numGroups > 0 && numItems > 0
-                    && itemValues.size > 0) { // Only define chart data if any itemValues have been defined - else
-                    valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + allItems.map(it => itemValues.get(it) ?? 50).join('.');
+                if (numGroups > 0 && numItems > 0 && itemValues.size > 0) { // Only define chart data if any itemValues have been defined - else
+                        // Check if all values are default - ignore if that is the case
+                        if ([...itemValues.values()].some(val => val !== 50))
+                            valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + allItems.map(it => itemValues.get(it) ?? 50).join('.');
                 }
 
                 // Build full URL
@@ -1507,6 +1520,21 @@
                                 'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior#Modification',
                                 'Theatrics=Role Play, Scenes',
                                 'Words=Dirty Talk, Verbal#Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
+                            ],
+                            logo: 'Logo',
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'SadistMasochist',
+                        value: {
+                            title: 'Sadist <-> Masochist',
+                            data: ['I like causing=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Control, Reaction, Sensory Denial, Sensory#Overstimulation',
+                                'Sadist environment=Private, Public, CNC',
+                                'Sadist dividend=Sexual arousal, Partners Experience, Psychological#Satisfaction',
+                                'I like receiving=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Control, Reaction, Sensory Denial, Sensory#Overstimulation',
+                                'Masochist environment=Private, Public, CNC',
+                                'Masochist dividend=Sexual arousal, Spiritual Catharsis, Emotional Release, Endorphin Junky, Brat, Partners Experience, Psychological#Satisfaction, Pushing Limits, Role Play, Powerlessness'
                             ],
                             logo: 'Logo',
                             flattenedData: ''
