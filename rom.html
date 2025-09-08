@@ -2,7 +2,7 @@
 <html lang="en">
 <!--
     Radar-o-Matatron
-    v0.1.250902
+    v0.1.250908
     (c) 2025
 
     Notes:
@@ -925,6 +925,9 @@
                     const fontSize = parseInt(ctx.font.match(/\d+/)[0], 10);
                     const lineHeight = fontSize * 1.2;
 
+                    let currentGroup = '';
+                    let flipped = true;
+
                     allItems.forEach((item, i) => {
                         const a = itemAngles[i];
                         const r = chartRadius + labelsExtraRadius;
@@ -943,11 +946,22 @@
                             ctx.rotate(tangentAngle);
 
                             // Flip upside-down labels for readability depending on position
-                            let flipped = false;
-                            if (tangentAngle >= Math.PI / 2 && tangentAngle <= (3 * Math.PI) / 2) {
+                            // Over engineered so it won't flip labels if part way through a group,
+                            // waits for group change. Helps with group consistency
+                            if (tangentAngle >= Math.PI / 2 && tangentAngle <= (3 * Math.PI) / 2)
                                 ctx.rotate(Math.PI);
-                                flipped = true;
-                            }
+                            else if (currentGroup != item.group && flipped)
+                                    flipped = false;
+                            else if (flipped)
+                                ctx.rotate(Math.PI);
+                            currentGroup = item.group;
+                            
+                            // // Flipping ignoring group boundaries...
+                            // flipped = false;
+                            // if (tangentAngle >= Math.PI / 2 && tangentAngle <= (3 * Math.PI) / 2) {
+                            //     ctx.rotate(Math.PI);
+                            //     flipped = true;
+                            // }
 
                             // Set alignment relative to rotated context
                             ctx.textAlign = flipped ? 'left' : 'right';
@@ -1498,16 +1512,17 @@
                         }
                     },
                     {
-                        id: 'PlayFighting',
+                        id: 'PlayFighting101',
                         value: {
-                            title: 'Play Fighting',
-                            data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.',
-                                'Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal',
+                            title: 'Play Fighting 101',
+                            data: ['Equipment=Rope, Blindfolds, Crops etc.',
+                                'Pleasure=Groping,Sensual#touching#teasing',
                                 'Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain',
-                                'Physical Harm=Biting, Scratching, Bruises',
-                                'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
+                                'Physical=Biting, Scratching, Bruises, To#Exhaustion',
+                                'Impact=Stingy, Thuddy, Slaps, Spanks',
                                 'Psychological=Degradation, Praise',
-                                'Dangerous=Chokes and#Strangles, Breath Play'
+                                'Dangerous=Chokes and#Strangles, Breath Play',
+                                'My Health=General Physical, General Mental, Fitness, Stamina'
                             ],
                             logo: 'PlayFighting',
                             flattenedData: ''
@@ -1523,7 +1538,8 @@
                                 'Physical Harm=Biting, Scratching, Bruises',
                                 'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
                                 'Psychological=Degradation, Praise',
-                                'Dangerous=Chokes and#Strangles, Breath Play'
+                                'Dangerous=Chokes and#Strangles, Breath Play',
+                                'My Health=General Physical, General Mental, Fitness, Stamina'
                             ],
                             logo: 'PlayFighting',
                             flattenedData: ''
