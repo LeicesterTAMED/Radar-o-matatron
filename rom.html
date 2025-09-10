@@ -2,7 +2,7 @@
 <html lang="en">
 <!--
     Radar-o-Matatron
-    v1.0.250908
+    v1.0.250910
     (c) 2025
 
     Notes:
@@ -109,9 +109,11 @@
         }
 
         textarea {
-            min-height: 130px;
+            /* min-height: 130px; */
             white-space: pre;
-            line-height: 1.35
+            line-height: 1.35;
+            resize: none;
+            overflow: hidden;
         }
 
         .title {
@@ -301,14 +303,20 @@
             <div class="title" style="font-size: 10px; font-style: italic;">The chart maker with an overcomplicated
                 name!</div>
             <div class="title" style="font-size: 18px;">Kinky Edition v1.0</div>
-            <div id="canvasButtons"
+            <div id="chartType"
                 style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
-                <button id="copyBtn" style="white-space: nowrap;">📋 Copy to clipboard</button>
-                <button id="saveBtn" style="white-space: nowrap;">💾 Save image</button>
-                <button id="shareChart" style="white-space: nowrap;">🔗 Share</button>
+                <select id="templates">
+                </select>
             </div>
             <div class="canvasWrap" style="margin-top: 10px;">
                 <canvas id="chartCanvas"></canvas>
+            </div>
+            <div id="canvasButtons"
+                style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
+                <button id="copyBtn" style="white-space: nowrap;">📋 Image to clipboard</button>
+                <button id="saveBtn" style="white-space: nowrap;">💾 Save image</button>
+                <button id="shareChart" style="white-space: nowrap;">🔗 Share with values</button>
+                <button id="shareNewChart" style="white-space: nowrap;">🔗 Share new</button>
             </div>
             <div id="controls" class="controls"></div>
             <div style="margin-top: 12px;">
@@ -317,41 +325,27 @@
                     <select id="messageTemplates"></select>
                 </div>
                 <input id="messageStart" name="messageStart" type="text" autocomplete="on" />
-                <input id="messageCore" name="messageCore" type="text" autocomplete="on" />
+                <textarea id="messageCore" name="messageCore" spellcheck="false" autocomplete="on"></textarea>
                 <input id="messageEnd" name="messageEnd" type="text" autocomplete="on" />
             </div>
         </div>
 
         <div class="panel">
             <div class="row">
-                <button id="toggleOptions"
-                    onclick="document.getElementById('options').style.display = document.getElementById('options').style.display === 'none' ? 'block' : 'none'">
-                    ⚙️ Toggle chart configuration options</button>
+                <button id="toggleOptions">⚙️ Toggle chart configuration options</button>
             </div>
             <div id="options" style="margin-top: 6px; display: none">
-
                 <div class="row">
                     <div>
-                        Warning - changing templates will reset your chart data<br /><br />
-                        Where you see # in any text, it is a placeholder where a new line will be inserted when
-                        displayed on the chart. This can help with layout.
-                    </div>
-                    <div>
-                        <label for="templates"><b>Predefined Chart Templates</b></label>
-                        <select id="templates">
-                        </select>
-                        <div class="hint">Select a template to set a predefined Title and Chart Definition</div>
-                    </div>
-
-                    <div>
                         <label for="title"><b>Title</b></label>
-                        <input id="title" type="text" value="Test" />
+                        <textarea id="title" value="Test"></textarea>
                     </div>
                     <div>
                         <label for="data"><b>Chart Definition</b></label>
-                        <div class="sub">Enter groups as Group=Item 1,Item 2,Item 3 etc. Put new groups on a new line.
+                        <div class="sub">Any changes to this will reset your values. Enter groups as Group=Item 1,Item 2,Item 3 etc. Put new groups on a new line.
+                            Put _ in items to split text across multiple lines in the graph.
                             Item's will appear in colour coordinated groups.</div>
-                        <textarea id="data" spellcheck="false"></textarea>
+                        <textarea id="chartData" spellcheck="false"></textarea>
                     </div>
                     <div style="border-top: 1px solid var(--muted); padding-top: 12px;">
                         <label for="axisLabels"><b>Axis labels</b></label>
@@ -402,8 +396,8 @@
             const fontItemLabel = '20px system-ui, sans-serif';
             const fontLabelMeasurement = 'bold 24px sans-serif';
             const fontGroupLabel = '600 24px system-ui, sans-serif';
-            const fontPointLabelIsNumeric = '24px sans-serif';
-            const fontPointLabelNoneNumeric = '24px sans-serif';
+            const fontValueLabelIsNumeric = '24px sans-serif';
+            const fontValueLabelNoneNumeric = '24px sans-serif';
             const fontAxisLabel = '16px system-ui, sans-serif';
 
             // --- Colors
@@ -432,10 +426,12 @@
             let axis;
 
             const ui = {
+                options: $('#options'),
+                toggleOptions: $('#toggleOptions'),
                 toast: $('#toast'),
                 siteLogo: $('#siteLogo'),
                 chartLogo: $('#chartLogo'),
-                chartData: $('#data'),
+                chartData: $('#chartData'),
                 title: $('#title'),
                 axisLabels: $('#axisLabels'),
                 gridStyle: $('#gridStyle'),
@@ -447,22 +443,25 @@
                 rotateLabels: $('#rotateLabels'),
                 showValues: $('#showValues'),
                 rotateValueLabels: $('#rotateValueLabels'),
-                placeValueLabelsAtEdge: $('#placeValueLabelsAtEdge')
+                placeValueLabelsAtEdge: $('#placeValueLabelsAtEdge'),
+                templates: $('#templates'),
+                axisLabelDefaults: $('#axisLabelDefaults'),
+                messageTemplates: $('#messageTemplates')
             };
 
             const ctx = ui.canvas.getContext('2d');
 
             // --- Draw lines of text to canvas down from start point
-            function drawMultilineText(ctx, text, x, y, lineHeight) {
-                const lines = text.split('#');
+            function drawMultilineText(ctx, text, x, y, lineHeight, separator) {
+                const lines = text.split(separator);
                 lines.forEach((line, i) => {
                     ctx.fillText(line, x, y + i * lineHeight);
                 });
             }
 
             // --- Draw lines of text to canvas up from start point
-            function drawMultilineTextUp(ctx, text, x, y, lineHeight) {
-                const lines = text.split('#');
+            function drawMultilineTextUp(ctx, text, x, y, lineHeight, separator) {
+                const lines = text.split(separator);
                 const totalHeight = (lines.length - 1) * lineHeight;
 
                 lines.forEach((line, i) => {
@@ -472,8 +471,8 @@
             }
 
             // --- Draw lines of text centered on the start point
-            function drawMultilineTextCentered(ctx, text, x, y, lineHeight) {
-                const lines = text.split('#'); // Split into lines
+            function drawMultilineTextCentered(ctx, text, x, y, lineHeight, separator) {
+                const lines = text.split(separator); // Split into lines
                 const totalHeight = (lines.length - 1) * lineHeight;
                 const startY = y - totalHeight / 2;
 
@@ -597,7 +596,7 @@
 
                         const left = document.createElement('div');
                         const lab = document.createElement('label');
-                        lab.textContent = item.value.replaceAll('#', ' ');
+                        lab.textContent = item.value.replaceAll('#', ' ');      // Make sure new lines aren't new lines
                         left.appendChild(lab);
 
                         const right = document.createElement('div');
@@ -850,8 +849,8 @@
                         ctx.stroke();
 
                         ctx.font = axis.customValues
-                            ? fontPointLabelNoneNumeric
-                            : fontPointLabelIsNumeric;
+                            ? fontValueLabelNoneNumeric
+                            : fontValueLabelIsNumeric;
 
                         // Vertices
                         allItems.forEach((it, i) => {
@@ -951,11 +950,11 @@
                             if (tangentAngle >= Math.PI / 2 && tangentAngle <= (3 * Math.PI) / 2)
                                 ctx.rotate(Math.PI);
                             else if (currentGroup != item.group && flipped)
-                                    flipped = false;
+                                flipped = false;
                             else if (flipped)
                                 ctx.rotate(Math.PI);
                             currentGroup = item.group;
-                            
+
                             // // Flipping ignoring group boundaries...
                             // flipped = false;
                             // if (tangentAngle >= Math.PI / 2 && tangentAngle <= (3 * Math.PI) / 2) {
@@ -967,7 +966,7 @@
                             ctx.textAlign = flipped ? 'left' : 'right';
                             ctx.textBaseline = flipped ? 'middle' : 'middle';
 
-                            drawMultilineTextCentered(ctx, item.value, 0, 0, lineHeight);
+                            drawMultilineTextCentered(ctx, item.value, 0, 0, lineHeight, '_');
 
                             ctx.restore();
                         }
@@ -978,7 +977,7 @@
                             else if (ca < -0.25) ctx.textAlign = 'right';
                             else ctx.textAlign = 'center';
 
-                            drawMultilineText(ctx, item.value, x, y, lineHeight);
+                            drawMultilineText(ctx, item.value, x, y, lineHeight, '_');
                         }
                     });
                 }
@@ -1049,7 +1048,7 @@
                 ctx.fillStyle = '#000000';
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'top';
-                drawMultilineText(ctx, ui.title.value, 16, 16, 40);
+                drawMultilineText(ctx, ui.title.value, 16, 16, 40, '\n');
                 ctx.restore();
 
                 ctx.save();
@@ -1063,8 +1062,8 @@
                 ctx.fillText(formattedDate, ui.canvas.width - 16, ui.canvas.height - 10); //els.canvas.width / 2, 16);
                 ctx.restore();
 
-                if (ui.messageCore.value.length > 0) {
-                    let msg = ui.messageCore.value.trim();
+                let msg = ui.messageCore.value.trim();
+                if (msg.length > 0) {
 
                     const start = ui.messageStart.value.trim();
                     if (start.length > 0)
@@ -1083,7 +1082,7 @@
                     ctx.fillStyle = '#000000';
                     ctx.textAlign = 'left';
                     ctx.textBaseline = 'bottom';
-                    drawMultilineTextUp(ctx, msg, 16, ui.canvas.height - 10, 28);
+                    drawMultilineTextUp(ctx, msg, 16, ui.canvas.height - 10, 28, '\n');
                     ctx.restore();
                 }
             }
@@ -1108,6 +1107,15 @@
             ui.messageCore.addEventListener('input', debounce(draw, 100));
             ui.messageEnd.addEventListener('input', debounce(draw, 100));
             ui.chartLogo.addEventListener('load', draw); // --- Redraw on image load (so appears in chart, will be missing at start)
+            ui.toggleOptions.addEventListener('click', toggleOptions);
+
+            // Auto sizing textareas
+            document.querySelectorAll('textarea').forEach(textarea => {
+                textarea.addEventListener('input', () => {
+                    textarea.style.height = 'auto';
+                    textarea.style.height = textarea.scrollHeight + 'px';
+                });
+            });
 
             window.addEventListener('resize', debounce(draw, 60), { passive: true });
 
@@ -1123,28 +1131,28 @@
 
                 // save off mapped values in case we want them later (e.g. change back to this chart)
                 const currentChart = findChart();
-                if (currentChart)
-                    previousItemValues.set(currentChart.id, allItems.map(it => itemValues.get(it) ?? 50))
+                if (currentChart.chartDefinition)
+                    previousItemValues.set(currentChart.chartDefinition.id, allItems.map(it => itemValues.get(it) ?? 50))
 
-                let chart = defaultData.chartData.find(chart => chart.id === selectedValue); //?.value;
+                let chart = defaultData.chartDefinitions.find(chart => chart.id === selectedValue); //?.value;
                 if (!chart)
-                    chart = defaultData.chartData.find(chart => chart.id === 'Default'); //?.value;
+                    chart = defaultData.chartDefinitions.find(chart => chart.id === 'Default'); //?.value;
 
-                const chartValue = chart.value;
-
-                titleParam = chartValue.title;
-                dataParam = chartValue.data.map(line => line.trim()).join('\n');
+                const chartDefinition = chart.definition;
 
                 // Logo
-                let logoSrc = (defaultData.logos.find(item => item.id === chartValue.logo.toLowerCase())?.filename);
+                let logoSrc = (defaultData.logos.find(item => item.id === chartDefinition.logo.toLowerCase())?.filename);
 
                 if (!logoSrc)
                     logoSrc = 'SiteLogo.png';
 
                 ui.chartLogo.src = 'images/' + logoSrc;
 
-                ui.title.value = titleParam;
-                ui.chartData.value = dataParam;
+                ui.title.value = chartDefinition.title;
+                resizeTextarea(ui.title);
+                ui.chartData.value = chartDefinition.data.map(line => line.trim()).join('\n');
+                ui.chartData.style.height = 'auto';
+                ui.chartData.style.height = ui.chartData.scrollHeight + 'px';
 
                 // Make sure existing items are cleared so no saved values are retained
                 // ToDo: Save to a map - can be restored if chart type is changed back again?
@@ -1167,8 +1175,8 @@
             });
 
             $('#messageTemplates').addEventListener('change', () => {
-                const msg = messageTemplates.value;
-                ui.messageCore.value = msg || '';
+                ui.messageCore.value = messageTemplates?.value || '';
+                resizeTextarea(ui.messageCore);
 
                 if (ui.messageStart.value.trim().length === 0 && msg.length > 0)
                     ui.messageStart.value = 'Person A';
@@ -1218,37 +1226,48 @@
                 setToast('✅ Image saved - check your downloads folder.');
             });
 
+            // Find chart will return a set of custom chart data if no chart is found which can be used as part of URLs
             function findChart() {
                 // Check if defaults have flattened variants of data yet, and if not, do it!
-                if (defaultData.chartData[0].value.flattenedData === '')
+                if (defaultData.chartDefinitions[0].definition.flattenedData === '')
                     // Create a flattened version of data for when checking text below for link creation
-                    defaultData.chartData.forEach(it => it.value.flattenedData = it.value.data.join(';'));
+                    defaultData.chartDefinitions.forEach(item => item.definition.flattenedData = item.definition.data.join('~'));
 
                 // Data combined into equivalent of single line with ; separators
-                let data = ui.chartData.value.replaceAll('\n', ';');
+                let definitionData = ui.chartData.value.replaceAll('\n', '~');
 
                 // Check to see if the axisText matches any of the defaults, if so use the id
                 // Reminder that even if someone selected text from a template, it's possible they modified it
-                return { chart: defaultData.chartData.find(item => item.value.flattenedData === data), searchData: data };
+                let chartDefinition = defaultData.chartDefinitions.find(item => item.definition.flattenedData === definitionData);
+
+                return { chartDefinition: chartDefinition, definitionData: definitionData };
             }
 
             // --- Share chart link
             $('#shareChart').addEventListener('click', () => {
+                shareChart(true);
+            });
+
+            $('#shareNewChart').addEventListener('click', () => {
+                shareChart(false);
+            });
+
+            function shareChart(shareValues) {
                 // Data combined into equivalent of single line with ; separators
-                let matchedDefaultChart = findChart();
-                if (matchedDefaultChart.chart)
-                    chart = matchedDefaultChart.chart.id;
+                let matchedChart = findChart();
+                if (matchedChart.chartDefinition)
+                    chart = matchedChart.chartDefinition.id;
                 else
-                    chart = data;
+                    chart = matchedChart.definitionData;
 
                 // else leave data alone, the string contains the data definition
                 const encodedData = encodeURIComponent(chart);
 
                 // Don't bother with a title if it's same as chart default
                 let encodedTitle;
-                console.log(matchedDefaultChart);
-                if (!matchedDefaultChart.chart || ui.title.value != matchedDefaultChart.chart?.value.title) {
-                    encodedTitle = encodeURIComponent(ui.title.value.trim().replaceAll(' ', '.'));    // Replace space with . to make more readable in URL, assumes . not used
+                if (!matchedChart.chartDefinition || ui.title.value != matchedChart.chartDefinition?.definition.title) {
+                    // Replace space with . to make more readable in URL, assumes . not used. Also /n to _
+                    encodedTitle = encodeURIComponent(ui.title.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
                 }
 
                 let axisLabels = ui.axisLabels.value.trim();
@@ -1260,20 +1279,24 @@
                 if (axisLabels != 'Smiles')
                     encodedAxis = encodeURIComponent(axisLabels);
 
-                const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim());
-                const encodedMessageCore = encodeURIComponent(ui.messageCore.value.trim());
-                const encodedMessageEnd = encodeURIComponent(ui.messageEnd.value.trim());
+                const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
+                // MessageCore replaces \n with ;_ for URL
+                const encodedMessageCore = encodeURIComponent(ui.messageCore.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
+                const encodedMessageEnd = encodeURIComponent(ui.messageEnd.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
 
                 // Values
-                // If ALL values are default, don't bother (e.g. sharing a fresh graph)
-                const numGroups = groups.length;
-                const numItems = allItems.length;
                 let valueList;
 
-                if (numGroups > 0 && numItems > 0 && itemValues.size > 0) { // Only define chart data if any itemValues have been defined - else
-                    // Check if all values are default - ignore if that is the case
-                    if ([...itemValues.values()].some(val => val !== 50))
-                        valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + allItems.map(it => itemValues.get(it) ?? 50).join('.');
+                // If ALL values are default, don't bother (e.g. sharing a fresh graph)
+                if (shareValues) {
+                    const numGroups = groups.length;
+                    const numItems = allItems.length;
+
+                    if (numGroups > 0 && numItems > 0 && itemValues.size > 0) { // Only define chart data if any itemValues have been defined - else
+                        // Check if all values are default - ignore if that is the case
+                        if ([...itemValues.values()].some(val => val !== 50))
+                            valueList = 'values=G~' + numGroups + '.I~' + numItems + '.' + allItems.map(it => itemValues.get(it) ?? 50).join('.');
+                    }
                 }
 
                 // Build full URL
@@ -1286,7 +1309,6 @@
 
                 const params = [
                     encodedTitle && `title=${encodedTitle}`,
-                    encodedData && `chart=${encodedData}`,
                     encodedAxis && `axis=${encodedAxis}`,
                     encodedMessageStart && `start=${encodedMessageStart}`,
                     encodedMessageCore && `message=${encodedMessageCore}`,
@@ -1295,15 +1317,16 @@
                     showValuesParam,
                     rotateValuesParam,
                     valuesOnEdgeParam,
+                    encodedData && `chart=${encodedData}`,
                     valueList
                 ].filter(Boolean).join('&');
 
                 const fullUrl = `${baseUrl}${params ? '?' + params : ''}`;
-                console.log('Full URL:', fullUrl);
+                console.log('Full URL[' + fullUrl.length + ']:', fullUrl);
 
                 let toastMessage;
                 if (fullUrl.length > 2000) {
-                    toastMessage = `⚠️ URL is ${fullUrl.length} characters long, which may be longer than some browsers allow (max 2000 characters). Consider simplifying data or title.`;
+                    toastMessage = `⚠️ URL is ${fullUrl.length} characters long, which may be longer than some browsers allow and may not work (max 2000 characters). Consider simplifying data or title.`;
                 }
 
                 // Copy to clipboard
@@ -1313,7 +1336,7 @@
                         console.error('Copy failed:', err);
                         setToast('⚠️ Failed to copy link.');
                     });
-            });
+            }
 
             function isTrue(value) {
                 const normalized = String(value).toLowerCase().trim();
@@ -1358,16 +1381,21 @@
 
                 // If contains a '=' then its a custom definition, else we look it up
                 if (chartParam.includes('=')) {
-                    chartParam = chartParam.replaceAll(';', '\n');
+                    chartParam = chartParam.replaceAll('~', '\n');
+                    // Have to use a custom title (if available)
+                    titleParam = (titleParam?.replaceAll('_', '\n').replaceAll('.', ' ')) ?? '';
                 }
                 else {
-                    chartItem = defaultData.chartData.find(item => item.id === chartParam)?.value;
+                    chartItem = defaultData.chartDefinitions.find(item => item.id === chartParam)?.definition;
 
                     if (!chartItem)
-                        chartItem = defaultData.chartData.find(item => item.id === 'Default')?.value;
+                        chartItem = defaultData.chartDefinitions.find(item => item.id === 'Default')?.definition;
 
                     if (titleParam.length == 0)
                         titleParam = chartItem.title;
+                    else
+                        // Custom title was set, we don't use the chart's
+                        titleParam = (titleParam?.replaceAll('_', '\n').replaceAll('.', ' ')) ?? '';
 
                     chartParam = chartItem.data.map(line => line.trim()).join('\n');
 
@@ -1375,15 +1403,7 @@
                         logoParam = chartItem.logo;
                 }
 
-
-                // Title
-                // If a default id exists for the title, we use that default, else we just keep as is
-                // if (titleParam.length > 0) {
-                //    dataItem = defaults.find(item => item.id === titleParam)?.value;
-                //     if (dataItem)
-                //         titleParam = dataItem.title;
-                // }
-                ui.title.value = titleParam.replaceAll('.', ' ');       // Replace back title . with spaces in URL
+                uiSetTitle(titleParam); // Setting title also has to resize textarea
                 ui.chartData.value = chartParam;
 
                 // Logo
@@ -1399,24 +1419,25 @@
                 // Message
                 // Any message with a space in is treated as a custom message, else we look it up
                 let msg;
-                if (messageCoreParam.includes(' '))
-                    msg = messageCoreParam;
+                if (messageCoreParam.includes('.'))
+                    msg = messageCoreParam.replaceAll('.', ' ').replaceAll('_', '\n');
                 else
                     msg = (defaultData.messages.find(item => item.id === messageCoreParam)?.value) || '';
 
                 ui.messageCore.value = msg;
+                resizeTextarea(ui.messageCore);
 
                 let hasCoreMessage = msg.length > 0;
 
                 if (messageStartParam.length > 0)
-                    msg = messageStartParam;
+                    msg = messageStartParam.replaceAll('.', ' ').replaceAll('_', '\n');
                 else
                     if (hasCoreMessage)
                         msg = 'Person A';
                 ui.messageStart.value = msg;
 
                 if (messageEndParam.length > 0)
-                    msg = messageEndParam;
+                    msg = messageEndParam.replaceAll('.', ' ').replaceAll('_', '\n');
                 else
                     if (hasCoreMessage)
                         msg = 'Person B';
@@ -1496,15 +1517,15 @@
                     { id: 'playfighting', filename: 'SockGoblin.png' },
                     { id: 'sockgoblin', filename: 'SockGoblin.png' }
                 ],
-                chartData: [
+                chartDefinitions: [
                     {
                         id: 'Default',
-                        value: {
-                            title: 'Radar-o-Matatron#Chart Maker#Extraordinaire!#Example',
+                        definition: {
+                            title: 'Example\nI Like',
                             data: ['Nature=Hiking, Forrest, Jungle, Mountains, Lakes, Rivers, Waterfalls, Tundra, Sandy, Snowy, Desert, Caves',
                                 'Media=Books, Films, Games, Music, Art, Photography',
-                                'Music=Pop, Rock, Electronic, HipHop, Country, Jazz, Classical, Other',
-                                'Food=Chinese, Indian, Italian, Mexican, Japanese, Korean, Thai, Vietnamese, English, Other',
+                                'Music=Electronic, Pop, Rock, HipHop, Country, Jazz, Classical, Other',
+                                'Food=Chinese, Indian, Italian, Mexican, Japanese, Korean, Thai, English, Other',
                                 'Pets=Cats, Dogs, Fish, Birds, Reptiles, Other'
                             ],
                             logo: 'Logo',
@@ -1513,15 +1534,15 @@
                     },
                     {
                         id: 'PlayFighting101',
-                        value: {
+                        definition: {
                             title: 'Play Fighting 101',
                             data: ['Equipment=Rope, Blindfolds, Crops etc.',
-                                'Pleasure=Groping,Sensual#touching#teasing',
-                                'Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain',
-                                'Physical=Biting, Scratching, Bruises, To#Exhaustion',
+                                'Pleasure=Groping,Sensual_touching_teasing',
+                                'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
+                                'Physical=Biting, Scratching, Bruises, To_Exhaustion',
                                 'Impact=Stingy, Thuddy, Slaps, Spanks',
                                 'Psychological=Degradation, Praise',
-                                'Dangerous=Chokes and#Strangles, Breath Play',
+                                'Dangerous=Chokes and_Strangles, Breath Play',
                                 'My Health=General Physical, General Mental, Fitness, Stamina'
                             ],
                             logo: 'PlayFighting',
@@ -1530,15 +1551,15 @@
                     },
                     {
                         id: 'PlayFighting',
-                        value: {
+                        definition: {
                             title: 'Play Fighting',
-                            data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops#Floggers#etc.',
-                                'Pleasure=Groping,Sensual#touching#teasing, Sex toys#external, Sex toys#internal',
-                                'Control=Being#overwhelmed, Being given#a chance,Restraints, Hair, Pressure#Points, Pain',
+                            data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops_Floggers_etc.',
+                                'Pleasure=Groping,Sensual_touching_teasing, Sex toys_external, Sex toys_internal',
+                                'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
                                 'Physical Harm=Biting, Scratching, Bruises',
                                 'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
                                 'Psychological=Degradation, Praise',
-                                'Dangerous=Chokes and#Strangles, Breath Play',
+                                'Dangerous=Chokes and_Strangles, Breath Play',
                                 'My Health=General Physical, General Mental, Fitness, Stamina'
                             ],
                             logo: 'PlayFighting',
@@ -1547,13 +1568,13 @@
                     },
                     {
                         id: 'GeneralPlay',
-                        value: {
+                        definition: {
                             title: 'General Play',
-                            data: ['Sensory=Impact, Strokes, Tickles, Sensory#Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
-                                'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative#Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                            data: ['Sensory=Impact, Strokes, Tickles, Sensory_Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
+                                'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
                                 'Toys=Vibrators, Dildos, Butt Plus',
                                 'Restraint=Rope, Chains, Spreader Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
-                                'Breath Play=Chocking, Strangling, Smothering, Hand over#Nose, Hand over#Mouth, Postural',
+                                'Breath Play=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth, Postural',
                                 'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
                                 'Misc.=Allergies, Lube'
@@ -1564,15 +1585,15 @@
                     },
                     {
                         id: 'Persona',
-                        value: {
+                        definition: {
                             title: 'Persona & Preferences',
                             data: ['Head Space=Pet Play, Age Play',
                                 'Servitude=Service, High Protocol, Worship, Chores, Homework',
-                                'Humiliation=Public Humiliation, Embarrassment, Cuckolding, Chastity, Financial#Domination',
+                                'Humiliation=Public Humiliation, Embarrassment, Cuckolding, Chastity, Financial_Domination',
                                 'Persona=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Voyeur, Exhibitionist, Primal',
-                                'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior#Modification',
+                                'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior_Modification',
                                 'Theatrics=Role Play, Scenes',
-                                'Words=Dirty Talk, Verbal#Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
+                                'Words=Dirty Talk, Verbal_Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
                             ],
                             logo: 'Logo',
                             flattenedData: ''
@@ -1580,11 +1601,11 @@
                     },
                     {
                         id: 'Sadist',
-                        value: {
+                        definition: {
                             title: 'Sadist',
-                            data: ['Causing=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Sensory#Denial, Sensory#Overload, Control, Reaction, Role Play',
-                                'Where=Private, Public, BDSM#Clubs, CNC',
-                                'Dividend=Sexual Arousal, Partners Experience, Psychological#Satisfaction'
+                            data: ['Causing=Restraint, Physical pain, Impact pain, Psychological_manipulation, Humiliation, Degradation, Sensory_Denial, Sensory_Overload, Control, Reaction, Role Play',
+                                'Where=Private, Public, BDSM_Clubs, CNC',
+                                'Dividend=Sexual Arousal, Partners Experience, Psychological_Satisfaction'
                             ],
                             logo: 'Logo',
                             flattenedData: ''
@@ -1592,11 +1613,11 @@
                     },
                     {
                         id: 'Masochist',
-                        value: {
+                        definition: {
                             title: 'Masochist',
-                            data: ['Receiving=Restraint, Physical pain, Impact pain, Psychological#manipulation, Humiliation, Degradation, Sensory#Denial, Sensory#Overload, Control, Reaction, Role Play',
-                                'Where=Private, Public, BDSM#Clubs, CNC',
-                                'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional#Release, Endorphin#Junky, Brat, Partners#Experience, Psychological#Satisfaction, Powerlessness, Challenging#Limits'
+                            data: ['Receiving=Restraint, Physical pain, Impact pain, Psychological_manipulation, Humiliation, Degradation, Sensory_Denial, Sensory_Overload, Control, Reaction, Role Play',
+                                'Where=Private, Public, BDSM_Clubs, CNC',
+                                'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional_Release, Endorphin_Junky, Brat, Partners_Experience, Psychological_Satisfaction, Powerlessness, Challenging_Limits'
                             ],
                             logo: 'Logo',
                             flattenedData: ''
@@ -1615,7 +1636,7 @@
                     { id: 'Medals', description: 'Medals 💩🥉🥈🥇🏆', value: '💩,🥉,🥈,🥇,🏆' },
                     { id: 'Moon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
                     { id: 'Person', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
-                    { id: 'Smiles', description: 'Smiles 😡😭😢😕😐🙂😃🤩', value: '😡,😭,😢,😕,😐,🙂,😃,🤩' },
+                    { id: 'Smiles', description: 'Smiles 😡😭😢😕🫤😐🙂😃🤩', value: '😡,😭,😢,😕,🫤,😐,🙂,😃,🤩' },
                     { id: 'Temperature', description: 'Temperature ❄️💧🔥', value: '❄️,💧,🔥' },
                     { id: 'Thumbs', description: 'Thumbs 👍👎', value: '👎,👍' },
                     { id: 'TThumbs', description: 'Thoughtful Thumbs 👍🤔👎', value: '👎,🤔,👍' },
@@ -1631,10 +1652,10 @@
 
                 messages: [
                     { id: 'None', value: '' },
-                    { id: 'do', value: '#is happy to do this#to' },
-                    { id: 'from', value: '#is happy to receive this#from' },
-                    { id: 'tastes', value: '#has tastes that they want#you to know about' },
-                    { id: 'with', value: '#is happy to do this#with' }
+                    { id: 'do', value: 'is\nhappy to do this\nto' },
+                    { id: 'from', value: 'is\nhappy to receive this\nfrom' },
+                    { id: 'tastes', value: 'has\ntastes that they want\nyou to know about' },
+                    { id: 'with', value: 'is\nhappy to do this\nwith' }
                 ]
             }
 
@@ -1648,32 +1669,52 @@
             }
 
             // Populate drop downs
-            const templateDropdown = $('#templates');
-            addPlaceholderOption(templateDropdown);
-            defaultData.chartData.forEach(({ id, value }) => {
+            addPlaceholderOption(ui.templates);
+            defaultData.chartDefinitions.forEach(({ id, definition }) => {
                 const option = document.createElement('option');
                 option.value = id;
-                option.textContent = value.title.replaceAll('#', ' ');
-                templateDropdown.appendChild(option);
+                option.textContent = definition.title.replaceAll('#', ' ');
+                ui.templates.appendChild(option);
             });
 
-            const axisDropdown = $('#axisLabelDefaults');
-            addPlaceholderOption(axisDropdown);
+            addPlaceholderOption(ui.axisLabelDefaults);
             defaultData.axisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = description;
-                axisDropdown.appendChild(option);
+                ui.axisLabelDefaults.appendChild(option);
             });
 
-            const messageDropDown = $('#messageTemplates');
-            addPlaceholderOption(messageDropDown);
+            addPlaceholderOption(ui.messageTemplates);
             defaultData.messages.forEach(({ id, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = value.replaceAll('#', ' ');
-                messageDropDown.appendChild(option);
+                ui.messageTemplates.appendChild(option);
             });
+
+            // Textarea handling for auto-resizing inputs
+            function uiSetTitle(value) {
+                ui.title.value = value;
+                resizeTextarea(ui.title);
+            }
+
+            function resizeTextarea(textarea) {
+                textarea.style.height = 'auto';
+                
+                //requestAnimationFrame(() => {
+                textarea.style.height = textarea.scrollHeight + 'px';
+                //});
+            }
+
+            // Extra UI stuff
+            function toggleOptions() {
+                ui.options.style.display = ui.options.style.display === 'none' ? 'block' : 'none';
+                if (ui.options.style.display === 'block') {
+                    resizeTextarea(ui.title);
+                    resizeTextarea(ui.chartData);
+                }
+            }
         })();
     </script>
 </body>
