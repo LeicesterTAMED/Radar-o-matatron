@@ -665,6 +665,88 @@
                 //ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             }
 
+
+            /**
+    * Draws text smoothly bent around a circle by slicing an offscreen canvas.
+    *
+    * @param {CanvasRenderingContext2D} ctx
+    * @param {string} text              The text to draw
+    * @param {number} cx                X-center circle (after any ctx.translate)
+    * @param {number} cy                Y-center circle
+    * @param {number} radius            Radius at which to place the text’s baseline
+    * @param {number} centerAngle       Angle (in radians) at which the text is centered
+    * @param {string} font              CSS font (e.g. "16px sans-serif")
+    * @param {string} fillStyle         Any valid canvas fillStyle
+    * @param {string} strokeStyle       Any valid canvas strokeStyle
+    * @param {number} lineWidth         Stroke width
+    */
+            function drawBentText(
+                ctx, text, cx, cy, radius, centerAngle,
+                font, fillStyle, strokeStyle, lineWidth = 1
+            ) {
+                // 1) Measure & render into offscreen canvas
+                const off = document.createElement('canvas');
+                const offCtx = off.getContext('2d', { willReadFrequently: true });
+                offCtx.font = font;
+                const m = offCtx.measureText(text);
+                const textW = Math.ceil(m.width) + lineWidth * 2;
+                // Fallback height: use font size * 1.2 if actualBoundingBox is unsupported
+                const fontSize = parseInt(font, 10) || 16;
+                const textH = Math.ceil(
+                    (m.actualBoundingBoxAscent && m.actualBoundingBoxDescent)
+                        ? (m.actualBoundingBoxAscent + m.actualBoundingBoxDescent)
+                        : fontSize * 1.2
+                ) + lineWidth * 2;
+
+                off.width = textW;
+                off.height = textH;
+                offCtx.font = font;
+                offCtx.textBaseline = 'middle';
+                offCtx.fillStyle = fillStyle;
+                offCtx.strokeStyle = strokeStyle;
+                offCtx.lineWidth = lineWidth;
+                offCtx.translate(lineWidth, textH / 2);
+                offCtx.strokeText(text, 0, 0);
+                offCtx.fillText(text, 0, 0);
+
+                // 2) Compute arc span
+                const totalArc = textW / radius; // radians spanned by full width
+                const startAngle = centerAngle - totalArc / 2;
+
+                // 3) Slice & draw each 1-px column
+                // reuse a small “slice” canvas to avoid recreating it in the loop
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = 1;
+                sliceCanvas.height = textH;
+                const sliceCtx = sliceCanvas.getContext('2d');
+
+                for (let px = 0; px < textW; px++) {
+                    const angle = startAngle + (px / textW) * totalArc;
+
+                    // copy one vertical slice from offscreen
+                    sliceCtx.clearRect(0, 0, 1, textH);
+                    sliceCtx.putImageData(
+                        offCtx.getImageData(px, 0, 1, textH),
+                        0, 0
+                    );
+
+                    // position on main canvas
+                    ctx.save();
+                    const rMid = radius;      // text baseline radius
+                    const dx = cx + rMid * Math.cos(angle);
+                    const dy = cy + rMid * Math.sin(angle);
+
+                    ctx.translate(dx, dy);
+                    ctx.rotate(angle + Math.PI / 2);
+
+                    // since sliceCanvas is drawn at x=0,y=0, shift up by half the height
+                    ctx.drawImage(sliceCanvas, 0, -textH / 2);
+                    ctx.restore();
+                }
+            }
+
+
+
             // --- Core Chart redraw
             function draw() {
                 resizeCanvas();
@@ -999,36 +1081,69 @@
                     ctx.strokeStyle = 'rgba(255,255,255,1)';
                     ctx.lineWidth = 5;
 
-                    groups.forEach(g => {
-                        const count = g.items.length;
-                        if (!count) return;
+                    const bendText = true;
 
-                        const midIndex = offset + (count - 1) / 2;
-                        const a = start + midIndex * step;
-                        const r = chartRadius + groupLabelsExtraRadius;
-                        const x = Math.cos(a) * r;
-                        const y = Math.sin(a) * r;
+                    // Render text curved around circle - higher overhead
+                    if (bendText) {
+                        groups.forEach(group => {
+                            const count = group.items.length;
+                            if (!count) return;
 
-                        ctx.save();
-                        ctx.translate(x, y);
+                            const midIndex = offset + (count - 1) / 2;
+                            const a = start + midIndex * step;
+                            const r = chartRadius + groupLabelsExtraRadius;
 
-                        // Rotate flat along the arc (tangential)
-                        const tangentAngle = a + Math.PI / 2;
-                        ctx.rotate(tangentAngle);
+                            // draw bent label centered at angle `angle`
+                            drawBentText(
+                                ctx,
+                                group.name,            // text
+                                0, 0,                  // cx, cy (we translate next)
+                                r,                     // radius
+                                a,                     // centerAngle
+                                fontGroupLabel,        // font
+                                rgba(groupColors.get(group.name), 0.95),
+                                'rgba(255,255,255,1)', // Wite stroke to make sure letters are always visible if over image
+                                5                      // stroke width
+                            );
 
-                        // Flip upside-down labels for readability
-                        if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2)
-                            ctx.rotate(Math.PI);
+                            offset += count;
+                        });
+                    }
+                    else {
+                        groups.forEach(group => {
+                            const count = group.items.length;
+                            if (!count) return;
 
-                        ctx.textAlign = 'center';
+                            const midIndex = offset + (count - 1) / 2;
+                            const a = start + midIndex * step;
+                            const r = chartRadius + groupLabelsExtraRadius;
+                            const x = Math.cos(a) * r;
+                            const y = Math.sin(a) * r;
 
-                        ctx.fillStyle = rgba(groupColors.get(g.name), 0.95);
-                        ctx.strokeText(g.name, 0, 0);
-                        ctx.fillText(g.name, 0, 0);
-                        ctx.restore();
+                            ctx.save();
+                            ctx.translate(x, y);
 
-                        offset += count;
-                    });
+                            // Rotate flat along the arc (tangential)
+                            const tangentAngle = a + Math.PI / 2;
+                            ctx.rotate(tangentAngle);
+
+                            // Flip upside-down labels for readability
+                            if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2)
+                                ctx.rotate(Math.PI);
+
+                            ctx.textAlign = 'center';
+
+                            ctx.fillStyle = rgba(groupColors.get(group.name), 0.95);
+                            ctx.strokeText(group.name, 0, 0);
+                            ctx.fillText(group.name, 0, 0);
+
+                            ctx.restore();
+
+                            offset += count;
+                        });
+
+                    }
+
                 }
 
                 // radial item separation lines (rendered at end to ensure always visible)
@@ -1575,7 +1690,7 @@
                         id: 'GeneralInterest',
                         definition: {
                             title: 'General Interest',
-                            data: ['With=Man, Woman, Bi, Trans, Group',
+                            data: ['Play With=Men, Woman, Bi, Trans, Group',
                                 'On Me=Spanked, Impact Strokes, Tickled, Sensory_Deprivation, Electro Play, Wax',
                                 'On You=Spanking, Impact Strokes, Tickling, Sensory_Deprivation, Electro Play, Wax',
                                 'On Me=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
