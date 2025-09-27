@@ -633,8 +633,23 @@
                                 : `${v}%`;
 
                             sliderValue.textContent = label;
+
+                            // Throttle redraw on slider movement
+                            // const now = Date.now();
+                            // if (now - lastDraw > 250) {
+                            //     lastDraw = now;
+                            //     draw();
+                            // }
+
+                            // Always redraw on slider movement
+                            //draw();
+                        });
+
+                        // Redraw on slider completion
+                        slider.addEventListener('change', () => {
                             draw();
                         });
+
 
                         left.appendChild(slider);
                         row.appendChild(left);
@@ -645,6 +660,8 @@
                     ui.controls.appendChild(fs);
                 });
             }
+
+            var lastDraw = 0;
 
             // --- Canvas sizing
             // Canvas is a fixed size (as we want to produce a fixed image size)
@@ -665,86 +682,211 @@
                 //ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             }
 
+            // /**
+            // * Draws text smoothly bent around a circle by rotating each character
+            // * rotating and drawing them one at a time.
+            // * Also keeps text upright (flipping it over) on the bottom half of the circle.
+            // * Not pixel perfect but is fast and does a decent job.
+            // *
+            // * @param {CanvasRenderingContext2D} ctx
+            // * @param {string} text
+            // * @param {number} cx
+            // * @param {number} cy
+            // * @param {number} radius
+            // * @param {number} centerAngle       // radians, label centered at this angle
+            // * @param {string} font              // e.g. "16px sans-serif"
+            // * @param {string} fillStyle
+            // * @param {string} strokeStyle
+            // * @param {number} lineWidth
+            // */
+            function drawCurvedText(ctx, text, cx, cy, radius, centerAngle, font, fillStyle, strokeStyle, lineWidth = 1) {
+                ctx.save();
+                ctx.font = font;
+                ctx.fillStyle = fillStyle;
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = lineWidth;
+                ctx.textBaseline = "middle";
 
-            /**
-    * Draws text smoothly bent around a circle by slicing an offscreen canvas.
-    *
-    * @param {CanvasRenderingContext2D} ctx
-    * @param {string} text              The text to draw
-    * @param {number} cx                X-center circle (after any ctx.translate)
-    * @param {number} cy                Y-center circle
-    * @param {number} radius            Radius at which to place the text’s baseline
-    * @param {number} centerAngle       Angle (in radians) at which the text is centered
-    * @param {string} font              CSS font (e.g. "16px sans-serif")
-    * @param {string} fillStyle         Any valid canvas fillStyle
-    * @param {string} strokeStyle       Any valid canvas strokeStyle
-    * @param {number} lineWidth         Stroke width
-    */
-            function drawBentText(
-                ctx, text, cx, cy, radius, centerAngle,
-                font, fillStyle, strokeStyle, lineWidth = 1
-            ) {
-                // 1) Measure & render into offscreen canvas
-                const off = document.createElement('canvas');
-                const offCtx = off.getContext('2d', { willReadFrequently: true });
-                offCtx.font = font;
-                const m = offCtx.measureText(text);
-                const textW = Math.ceil(m.width) + lineWidth * 2;
-                // Fallback height: use font size * 1.2 if actualBoundingBox is unsupported
-                const fontSize = parseInt(font, 10) || 16;
-                const textH = Math.ceil(
-                    (m.actualBoundingBoxAscent && m.actualBoundingBoxDescent)
-                        ? (m.actualBoundingBoxAscent + m.actualBoundingBoxDescent)
-                        : fontSize * 1.2
-                ) + lineWidth * 2;
+                // Normalize angle to [0, 2π)
+                const TWO_PI = Math.PI * 2;
+                const theta = ((centerAngle % TWO_PI) + TWO_PI) % TWO_PI;
 
-                off.width = textW;
-                off.height = textH;
-                offCtx.font = font;
-                offCtx.textBaseline = 'middle';
-                offCtx.fillStyle = fillStyle;
-                offCtx.strokeStyle = strokeStyle;
-                offCtx.lineWidth = lineWidth;
-                offCtx.translate(lineWidth, textH / 2);
-                offCtx.strokeText(text, 0, 0);
-                offCtx.fillText(text, 0, 0);
+                // Flip condition: bottom half of circle (90°–270°)
+                const shouldFlip = (theta < 2 * Math.PI / 2);
 
-                // 2) Compute arc span
-                const totalArc = textW / radius; // radians spanned by full width
-                const startAngle = centerAngle - totalArc / 2;
+                // Measure total width
+                const metrics = ctx.measureText(text);
+                const textW = metrics.width;
+                const totalArc = textW / radius;
 
-                // 3) Slice & draw each 1-px column
-                // reuse a small “slice” canvas to avoid recreating it in the loop
-                const sliceCanvas = document.createElement('canvas');
-                sliceCanvas.width = 1;
-                sliceCanvas.height = textH;
-                const sliceCtx = sliceCanvas.getContext('2d');
+                // If flipped, we’ll draw characters in reverse order
+                const chars = shouldFlip ? [...text].reverse() : [...text];
 
-                for (let px = 0; px < textW; px++) {
-                    const angle = startAngle + (px / textW) * totalArc;
+                let currentAngle = centerAngle - totalArc / 2;
 
-                    // copy one vertical slice from offscreen
-                    sliceCtx.clearRect(0, 0, 1, textH);
-                    sliceCtx.putImageData(
-                        offCtx.getImageData(px, 0, 1, textH),
-                        0, 0
-                    );
+                for (let i = 0; i < chars.length; i++) {
+                    const char = chars[i];
+                    const charW = ctx.measureText(char).width;
+                    const charArc = charW / radius;
+                    const angle = currentAngle + charArc / 2;
 
-                    // position on main canvas
+                    const dx = cx + radius * Math.cos(angle);
+                    const dy = cy + radius * Math.sin(angle);
+
                     ctx.save();
-                    const rMid = radius;      // text baseline radius
-                    const dx = cx + rMid * Math.cos(angle);
-                    const dy = cy + rMid * Math.sin(angle);
-
                     ctx.translate(dx, dy);
                     ctx.rotate(angle + Math.PI / 2);
 
-                    // since sliceCanvas is drawn at x=0,y=0, shift up by half the height
-                    ctx.drawImage(sliceCanvas, 0, -textH / 2);
+                    if (shouldFlip) {
+                        // Rotate 180° so glyphs are upright
+                        ctx.rotate(Math.PI);
+                    }
+
+                    ctx.strokeText(char, 0, 0);
+                    ctx.fillText(char, 0, 0);
+
                     ctx.restore();
+
+                    currentAngle += charArc;
                 }
+
+                ctx.restore();
             }
 
+
+
+            // /**
+            // * Draws text smoothly bent around a circle by slicing an offscreen canvas,
+            // * keeping text upright (flipping it over) on the bottom half of the circle.
+            // * This is not optimal in quality or performance, but does the job
+            // *
+            // * @param {CanvasRenderingContext2D} destCtx
+            // * @param {string} text
+            // * @param {number} cx
+            // * @param {number} cy
+            // * @param {number} radius
+            // * @param {number} centerAngle       // radians, label centered at this angle
+            // * @param {string} font              // e.g. "16px sans-serif"
+            // * @param {string} fillStyle
+            // * @param {string} strokeStyle
+            // * @param {number} lineWidth
+            // */
+            // function drawCurvedTextf(destCtx, text, cx, cy, radius, centerAngle, font, fillStyle, strokeStyle, lineWidth = 1) {
+            //     // Normalize angle to [0, 2π)
+            //     const TWO_PI = Math.PI * 2;
+            //     const theta = ((centerAngle % TWO_PI) + TWO_PI) % TWO_PI;
+
+            //     // Measure & render into offscreen canvas
+            //     const canvas = document.createElement('canvas');
+            //     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            //     ctx.font = font;
+
+            //     const m = ctx.measureText(text);
+            //     const textW = Math.ceil(m.width) + lineWidth * 2;
+            //     const fontSize = parseInt(font, 10) || 16;
+            //     const textH = Math.ceil(
+            //         (m.actualBoundingBoxAscent && m.actualBoundingBoxDescent)
+            //             ? (m.actualBoundingBoxAscent + m.actualBoundingBoxDescent)
+            //             : fontSize * 1.2
+            //     ) + lineWidth * 2;
+
+            //     canvas.width = textW;
+            //     canvas.height = textH;
+
+            //     ctx.font = font;
+            //     ctx.textBaseline = 'middle';
+            //     ctx.fillStyle = fillStyle;
+            //     ctx.strokeStyle = strokeStyle;
+            //     ctx.lineWidth = lineWidth;
+
+            //     // Draw baseline centered vertically
+            //     ctx.translate(lineWidth, textH / 2);
+
+            //     // Rotate text 180 degrees when on bottom half of circle so it always appears the correct way up
+            //     if (theta < 2 * Math.PI / 2) {
+            //         ctx.translate((textW - lineWidth * 2) / 2, 0);
+            //         ctx.rotate(Math.PI);
+            //         ctx.translate(-(textW - lineWidth * 2) / 2, 0);
+            //     }
+
+            //     ctx.strokeText(text, 0, 0);
+            //     ctx.fillText(text, 0, 0);
+
+            //     // arc span
+            //     const totalArc = textW / radius;
+            //     const startAngle = centerAngle - totalArc / 2;
+
+            //     // Slice & draw each 1-px column (reusing a small slice canvas)
+            //     const sliceCanvas = document.createElement('canvas');
+            //     sliceCanvas.width = 1;
+            //     sliceCanvas.height = textH;
+            //     const sliceCtx = sliceCanvas.getContext('2d');
+
+            //     for (let px = 0; px < textW; px++) {
+            //         // Reverse column order when flipped so reading stays left-to-right
+            //         const srcX = px;
+            //         const angle = startAngle + (px / textW) * totalArc;
+
+            //         sliceCtx.clearRect(0, 0, 1, textH);
+            //         sliceCtx.putImageData(ctx.getImageData(srcX, 0, 1, textH), 0, 0);
+
+            //         // Position on main canvas
+            //         destCtx.save();
+            //         const dx = cx + radius * Math.cos(angle);
+            //         const dy = cy + radius * Math.sin(angle);
+
+            //         // Tangent orientation
+            //         destCtx.translate(dx, dy);
+            //         destCtx.rotate(angle + Math.PI / 2);
+
+            //         destCtx.drawImage(sliceCanvas, 0, -textH / 2);
+
+            //         destCtx.restore();
+            //     }
+            // }
+
+            // Cache of loaded images by URL
+            const imageCache = new Map();
+
+            /**
+             * Draws an image as the canvas background, or white if not yet loaded.
+             * If the image is still loading, it will retry automatically once loaded.
+             *
+             * @param {CanvasRenderingContext2D} ctx
+             * @param {string} url - Image URL
+             */
+            function drawBackground(ctx, url) {
+                const { canvas } = ctx;
+
+                // Already loaded and cached
+                if (imageCache.has(url)) {
+                    const cachedImage = imageCache.get(url);
+                    if (cachedImage.complete && !cachedImage.error && cachedImage.naturalWidth > 0) {
+                        ctx.drawImage(cachedImage, 0, 0, canvas.width, canvas.height);
+                        return;
+                    }
+                }
+
+                // Not loaded yet → draw white fallback
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // If we haven't started loading this URL, kick it off
+                if (!imageCache.has(url)) {
+                    const img = new Image();
+
+                    img.onload = () => {
+                        draw();
+                    };
+                    img.onerror = () => {
+                        img.error = true;
+                        // stays white background
+                    };
+
+                    img.src = url;
+                    imageCache.set(url, img);
+                }
+            }
 
 
             // --- Core Chart redraw
@@ -754,8 +896,10 @@
                 const h = ui.canvas.height; //clientHeight || 600;
 
                 // ctx.clearRect(0, 0, w, h);
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+                //ctx.fillStyle = 'white';
+                //ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+
+                drawBackground(ctx, 'images/SockGoblin.png');
 
                 // layout
                 const cx = w / 2, cy = h / 2;
@@ -1094,7 +1238,7 @@
                             const r = chartRadius + groupLabelsExtraRadius;
 
                             // draw bent label centered at angle `angle`
-                            drawBentText(
+                            drawCurvedText(
                                 ctx,
                                 group.name,            // text
                                 0, 0,                  // cx, cy (we translate next)
@@ -1687,24 +1831,34 @@
                         }
                     },
                     {
-                        id: 'GeneralInterest',
+                        id: 'GeneralInterestMe',
                         definition: {
-                            title: 'General Interest',
-                            data: ['Play With=Men, Woman, Bi, Trans, Group',
-                                'On Me=Spanked, Impact Strokes, Tickled, Sensory_Deprivation, Electro Play, Wax',
-                                'On You=Spanking, Impact Strokes, Tickling, Sensory_Deprivation, Electro Play, Wax',
-                                'On Me=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
-                                'On You=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
-                                'On Me=Vibrators, Dildos, Butt Plus',
-                                'On You=Vibrators, Dildos, Butt Plus',
-                                'On Me=Rope, Restraints, Spreader Bars, Tape, Gags, Blindfolds, Hoods',
-                                'On You=Rope, Restraints, Spreader Bars, Tape, Gags, Blindfolds, Hoods',
-                                'On Me=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth',
-                                'On You=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth',
-                                'On Me=Cum, Spit, Blood, Urine, Scat, Vomit',
-                                'On You=Cum, Spit, Blood, Urine, Scat, Vomit',
-                                'Touch Me=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
-                                'Touch You=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
+                            title: 'General Interest\nOn Me',
+                            data: ['I want to play with=Men, Woman, Bi, Trans, Group',
+                                'Type of play on me=Spanking, Impact, Tickling, Sensory_Deprivation, Electro Play, Wax',
+                                'Sexual interaction=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                                'Toys=Vibrators, Dildos, Butt Plus',
+                                'Restraints=Rope, Restraints, Spreader_Bars, Tape, Gags, Blindfolds, Hoods',
+                                'More dangerous=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth',
+                                'Stuff on me=Cum, Spit, Blood, Urine, Scat, Vomit',
+                                'You can touch my=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
+                            ],
+                            logo: 'Logo',
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'GeneralInterestYou',
+                        definition: {
+                            title: 'General Interest\nOn Me',
+                            data: ['I want to play with=Men, Woman, Bi, Trans, Group',
+                                'I want to do this with you=Spanking, Impact, Tickling, Sensory_Deprivation, Electro Play, Wax',
+                                'Sexual interaction=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                                'Use toys on you=Vibrators, Dildos, Butt Plus',
+                                'Restraints=Rope, Restraints, Spreader_Bars, Tape, Gags, Blindfolds, Hoods',
+                                'More dangerous=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth',
+                                'Stuff on you=Cum, Spit, Blood, Urine, Scat, Vomit',
+                                'Want to touch your=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
                             ],
                             logo: 'Logo',
                             flattenedData: ''
