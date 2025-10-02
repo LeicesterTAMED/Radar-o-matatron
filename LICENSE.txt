@@ -1,0 +1,9 @@
+Copyright © MisterB (Mist3rBee) @ Leicester T.A.M.E.D. 2025
+
+Permission is granted to view and use the contents of this repository for **personal, non-commercial purposes only**.
+
+Redistribution, reproduction, or public sharing of any part of this repository — including code, data, images, or documentation — is **not permitted without explicit written consent** from the author.
+
+This software and its contents are provided "as is", without warranty of any kind, express or implied. The author shall not be held liable for any damages or consequences arising from its use.
+
+By accessing or using this repository or the files within, you agree to these terms.

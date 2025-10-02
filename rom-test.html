@@ -2,7 +2,7 @@
 <html lang="en">
 <!--
     Radar-o-Matatron
-    v1.0.250911
+    v1.1.251001
     (c) 2025 - MisterB @ Leicester T.A.M.E.D.
 
     Notes:
@@ -259,6 +259,26 @@
             z-index: 999;
         }
 
+        .buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: center;
+            margin-top: 8px;
+            gap: 5px;
+        }
+
+        /* Highlighting slider areas can really mess with the experience, so we try and limit it */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+            /* Safari */
+            -moz-user-select: none;
+            /* Firefox */
+            -ms-user-select: none;
+            /* IE/Edge */
+        }
+
         @keyframes swing {
             0% {
                 transform: rotate(45deg);
@@ -303,23 +323,29 @@
             <div class="title" style="font-size: 24px;">Radar-o-Matatron</div>
             <div class="title" style="font-size: 10px; font-style: italic;">The chart maker with an overcomplicated
                 name!</div>
-            <div class="title" style="font-size: 18px;">Kinky Edition v1.0</div>
+            <div class="title" style="font-size: 18px;">Kinky Edition v1.1</div>
             <div id="chartType"
                 style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
                 <select id="templates">
                 </select>
             </div>
-            <div class="canvasWrap" style="margin-top: 10px;">
-                <canvas id="chartCanvas"></canvas>
-            </div>
-            <div id="canvasButtons"
-                style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
+            <div id="canvasButtons" class="buttons">
                 <button id="copyBtn" style="white-space: nowrap;">📋 Image to clipboard</button>
                 <button id="saveBtn" style="white-space: nowrap;">💾 Save image</button>
                 <button id="shareNewChart" style="white-space: nowrap;">🔗 Share link</button>
                 <button id="shareChart" style="white-space: nowrap;">🔗 Share with values</button>
             </div>
-            <div id="controls" class="controls"></div>
+            <div class="canvasWrap" style="margin-top: 10px;">
+                <canvas id="chartCanvas"></canvas>
+            </div>
+            <div id="extraButtons" class="buttons">
+                <select id="axisLabelQuickPick">
+                </select>
+                <button id="changeBackground" style="white-space: nowrap;">🔄 Change background</button>
+                <select id="gradientQuickPick">
+                </select>
+            </div>
+            <div id="controls" class="controls no-select"></div>
             <div style="margin-top: 12px;">
                 <div>
                     <label for="messageTemplates" style=><b>Message</b></label>
@@ -356,6 +382,27 @@
                         <div class="hint">Labels order from centre of chart to outside. If no labels specified, will use
                             % instead.</div>
                     </div>
+                    <div style="border-top: 1px solid var(--muted); padding-top: 12px;">
+                        <label for="gradientDefaults"><b>Highlighted gadient</b></label>
+                        <select id="gradientDefaults"></select>
+                        <!-- Swatch container -->
+                        <div style="position: relative; width: 128px; height: 128px; margin-top: 8px;">
+                            <!-- Background image layer -->
+                            <div id="swatchBackground" style="position: absolute; inset: 0;
+                background: url('images/SockGoblin.png') center/cover no-repeat;
+                background-size: 75%;
+                border-radius: 50%;
+                opacity: 0.5;">
+                            </div>
+
+                            <!-- Gradient overlay layer -->
+                            <div id="gradientSwatch" style="position: absolute; inset: 0;
+                border: 1px solid #ccc; border-radius: 50%;">
+                            </div>
+                        </div>
+
+                        <div class="hint">Gradient that fills from the middle out for chart values.</div>
+                    </div>
                     <div>
                         <label for="polygonStyle"><b>Grid style</b></label>
                         <select id="gridStyle">
@@ -367,8 +414,10 @@
                     <div>
                         <label><input type="checkbox" id="rotateLabels" checked>Rotate labels around chart</label>
                         <label><input type="checkbox" id="showValues" checked>Show values on points</label>
-                        <label><input type="checkbox" id="rotateValueLabels" checked>Rotate values around chart</label>
-                        <label><input type="checkbox" id="placeValueLabelsAtEdge" checked>Place the values around the
+                        <label><input type="checkbox" id="rotateValueLabels" checked>Rotate values around
+                            chart</label>
+                        <label><input type="checkbox" id="placeValueLabelsAtEdge" checked>Place the values around
+                            the
                             edge</label>
                     </div>
                 </div>
@@ -451,6 +500,10 @@
                 placeValueLabelsAtEdge: $('#placeValueLabelsAtEdge'),
                 templates: $('#templates'),
                 axisLabelDefaults: $('#axisLabelDefaults'),
+                axisLabelQuickPick: $('#axisLabelQuickPick'),
+                gradientDefaults: $('#gradientDefaults'),
+                gradientQuickPick: $('#gradientQuickPick'),
+                gradientSwatch: $('#gradientSwatch'),
                 messageTemplates: $('#messageTemplates')
             };
 
@@ -460,6 +513,7 @@
             function drawMultilineText(ctx, text, x, y, lineHeight, separator) {
                 const lines = text.split(separator);
                 lines.forEach((line, i) => {
+                    //ctx.strokeText(line, x, y + i * lineHeight);
                     ctx.fillText(line, x, y + i * lineHeight);
                 });
             }
@@ -470,6 +524,7 @@
                 const totalHeight = (lines.length - 1) * lineHeight;
 
                 lines.forEach((line, i) => {
+                    //ctx.strokeText(line, x, y - totalHeight + i * lineHeight);
                     ctx.fillText(line, x, y - totalHeight + i * lineHeight);
                 });
 
@@ -482,6 +537,7 @@
                 const startY = y - totalHeight / 2;
 
                 lines.forEach((line, i) => {
+                    //ctx.strokeText(line, x, startY + i * lineHeight);
                     ctx.fillText(line, x, startY + i * lineHeight);
                 });
 
@@ -573,16 +629,27 @@
                 itemValues.clear();
 
                 if (savedValues == null) {
-                    const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
 
-                    allItems.forEach(it => {
-                        itemValues.set(it, old.has(it.key) ? old.get(it.key) : 50);
+                    console.log("NO SAVED VALUES - SAVING");
+                    console.log("itemvalues.entries", itemValues.entries());
+                    const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
+                    console.log("all items", allItems);
+                    allItems.forEach(item => {
+                        console.log("Setting", item);
+                        console.log("item.key", item.key);
+                        console.log("old.has", old.has(item.key));
+                        console.log("old.get", old.get(item.key));
+                        itemValues.set(item, old.has(item.key) ? old.get(item.key) : 50);
                     });
+                    console.log("ITEM VALUES", itemValues);
                 }
                 else {
+                    console.log("SAVED VALUES");
                     let counter = 0;
-                    allItems.forEach(it => {
-                        itemValues.set(it, savedValues[counter++]);
+                    allItems.forEach(item => {
+                        console.log("Item", item);
+                        console.log("saved", savedValues[counter]);
+                        itemValues.set(item, savedValues[counter++]);
                     });
                     savedValues = null;
                 }
@@ -701,6 +768,7 @@
             // */
             function drawCurvedText(ctx, text, cx, cy, radius, centerAngle, font, fillStyle, strokeStyle, lineWidth = 1) {
                 ctx.save();
+
                 ctx.font = font;
                 ctx.fillStyle = fillStyle;
                 ctx.strokeStyle = strokeStyle;
@@ -722,6 +790,13 @@
                 // If flipped, we’ll draw characters in reverse order
                 const chars = shouldFlip ? [...text].reverse() : [...text];
 
+                // We do this twice - once to stroke the text (create outlines in case any other gfx gets in its way such as Emjoi's)
+                // then fill text. If we stroke and fill per letter then the next letters stroke can overwrite pixels
+                // from the previous letters fill.
+
+                // We could buffer everything from the first pass and then draw the second pass based on calculated values
+                // but this will do for now.
+
                 let currentAngle = centerAngle - totalArc / 2;
 
                 for (let i = 0; i < chars.length; i++) {
@@ -737,12 +812,37 @@
                     ctx.translate(dx, dy);
                     ctx.rotate(angle + Math.PI / 2);
 
-                    if (shouldFlip) {
+                    if (shouldFlip)
                         // Rotate 180° so glyphs are upright
                         ctx.rotate(Math.PI);
-                    }
 
                     ctx.strokeText(char, 0, 0);
+                    //ctx.fillText(char, 0, 0);
+
+                    ctx.restore();
+
+                    currentAngle += charArc;
+                }
+
+                currentAngle = centerAngle - totalArc / 2;
+
+                for (let i = 0; i < chars.length; i++) {
+                    const char = chars[i];
+                    const charW = ctx.measureText(char).width;
+                    const charArc = charW / radius;
+                    const angle = currentAngle + charArc / 2;
+
+                    const dx = cx + radius * Math.cos(angle);
+                    const dy = cy + radius * Math.sin(angle);
+
+                    ctx.save();
+                    ctx.translate(dx, dy);
+                    ctx.rotate(angle + Math.PI / 2);
+
+                    if (shouldFlip)
+                        ctx.rotate(Math.PI);
+
+                    //ctx.strokeText(char, 0, 0);
                     ctx.fillText(char, 0, 0);
 
                     ctx.restore();
@@ -752,8 +852,6 @@
 
                 ctx.restore();
             }
-
-
 
             // /**
             // * Draws text smoothly bent around a circle by slicing an offscreen canvas,
@@ -855,14 +953,63 @@
              * @param {CanvasRenderingContext2D} ctx
              * @param {string} url - Image URL
              */
-            function drawBackground(ctx, url) {
+            function drawBackground(ctx, url, clip = false) {
                 const { canvas } = ctx;
 
                 // Already loaded and cached
                 if (imageCache.has(url)) {
                     const cachedImage = imageCache.get(url);
                     if (cachedImage.complete && !cachedImage.error && cachedImage.naturalWidth > 0) {
-                        ctx.drawImage(cachedImage, 0, 0, canvas.width, canvas.height);
+                        // Normal draw
+                        //ctx.drawImage(cachedImage, 0,0, canvas.width, canvas.height);
+
+                        // Tiled draw
+                        // const tileWidth = cachedImage.width * 0.2;
+                        // const tileHeight = cachedImage.height * 0.2;
+
+                        // for (let y = 0; y < canvas.height; y += tileHeight) {
+                        //     for (let x = 0; x < canvas.width; x += tileWidth) {
+                        //     ctx.drawImage(cachedImage, x, y, tileWidth, tileHeight);
+                        //     }
+                        // }
+
+                        // Centre circle area draw
+                        const offset = 0.17;
+                        const size = 1 - (offset * 2);
+                        ctx.drawImage(cachedImage, canvas.width * offset, canvas.height * offset, canvas.width * size, canvas.height * size);
+
+                        // // Lighten overlay
+                        // ctx.globalAlpha = 0.82; // Adjust transparency (0.0 to 1.0)
+                        // ctx.fillStyle = '#ffffff'; // White overlay to lighten
+                        // ctx.fillRect(0,0, canvas.width, canvas.height);
+
+                        if (!clip) {
+                            // Circular clip
+                            ctx.globalCompositeOperation = 'destination-in';
+                            ctx.beginPath();
+                            ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, 0, Math.PI * 2);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.globalCompositeOperation = 'source-over'; // Reset to default
+
+                            const centerX = canvas.width * 0.5;
+                            const centerY = canvas.height * 0.5;
+                            const innerRadius = 0;
+                            const outerRadius = Math.max(canvas.width, canvas.height) * 0.5;
+
+                            const gradient = ctx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, outerRadius);
+
+                            // Add color stops: white at center, transparent at edge
+                            gradient.addColorStop(0, 'rgba(255, 255, 255, .64)');
+                            gradient.addColorStop(0.7, 'rgba(255, 255, 255, 1)');
+
+                            ctx.fillStyle = gradient;
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        }
+
+                        // Reset alpha for future drawing
+                        //ctx.globalAlpha = 1.0;
+
                         return;
                     }
                 }
@@ -899,7 +1046,12 @@
                 //ctx.fillStyle = 'white';
                 //ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
 
-                drawBackground(ctx, 'images/SockGoblin.png');
+                if (currentBackdrop == null) {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+                }
+                else
+                    drawBackground(ctx, currentBackdrop);
 
                 // layout
                 const cx = w / 2, cy = h / 2;
@@ -1058,6 +1210,14 @@
                         });
                         ctx.closePath();
 
+                        // Fill with background image
+                        ctx.save();
+                        ctx.setTransform(1, 0, 0, 1, 0, 0);
+                        ctx.clip();
+                        drawBackground(ctx, currentBackdrop, true);
+                        ctx.restore();
+
+                        // Fill/overlay gradient
                         const canvas = ui.canvas;
                         const cx = canvas.width / 2;
                         const cy = canvas.height / 2;
@@ -1065,8 +1225,12 @@
                         const outerRadius = Math.sqrt(cx * cx + cy * cy) * 0.5; // full diagonal reach
 
                         const grad = ctx.createRadialGradient(cx, cy, innerRadius, cx, cy, outerRadius);
-                        grad.addColorStop(0, 'rgba(255, 0, 0, 0.48)');
-                        grad.addColorStop(1, 'rgba(0, 255, 0, 0.48)');
+                        //grad.addColorStop(0, 'rgba(255, 0, 0, 0.68)');
+                        //grad.addColorStop(1, 'rgba(0, 255, 0, 0.48)');
+
+                        currentGradient.stops.forEach(stop => {
+                            grad.addColorStop(stop.pos, stop.color);
+                        });
 
                         ctx.save();
                         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1111,7 +1275,7 @@
                             // Points
                             ctx.beginPath();
                             ctx.arc(x, y, 5.5, 0, Math.PI * 2);
-                            ctx.strokeStyle = 'rgba(137,169,255,0.45)';
+                            ctx.strokeStyle = 'rgba(0,0,0,0.69)';
                             ctx.lineWidth = 1;
                             ctx.stroke();
 
@@ -1153,10 +1317,13 @@
                 {
                     ctx.font = fontItemLabel;
                     const fontSize = parseInt(ctx.font.match(/\d+/)[0], 10);
-                    const lineHeight = fontSize * 1.2;
+                    const lineHeight = fontSize * 1.1;
 
                     let currentGroup = '';
                     let flipped = true;
+
+                    ctx.strokeStyle = 'rgba(255,255,255,1)';
+                    ctx.lineWidth = 5;
 
                     allItems.forEach((item, i) => {
                         const a = itemAngles[i];
@@ -1278,7 +1445,7 @@
                             ctx.textAlign = 'center';
 
                             ctx.fillStyle = rgba(groupColors.get(group.name), 0.95);
-                            ctx.strokeText(group.name, 0, 0);
+                            //ctx.strokeText(group.name, 0, 0);
                             ctx.fillText(group.name, 0, 0);
 
                             ctx.restore();
@@ -1351,12 +1518,22 @@
                 }
             }
 
-            // --- Processing/Generation of all elements
+            // --- Processing/Generation of all elements for a chart
             function rebuildAll() {
                 groups = parseData(ui.chartData.value);
                 allItems = groups.flatMap(g => g.items);
                 computeAngles();
                 assignColors();
+                axis = parseAxisLabels(ui.axisLabels.value);
+                buildControls();
+                draw();
+            }
+
+            // --- Lighter weight rebuild of controls only (e.g. axis label changes)
+            function rebuildControls() {
+                // Make sure we have a saved set of values to rebuild controls
+                savedValues = allItems.map(item => itemValues.get(item) ?? 50);
+
                 axis = parseAxisLabels(ui.axisLabels.value);
                 buildControls();
                 draw();
@@ -1390,14 +1567,15 @@
 
             const previousItemValues = new Map();
 
-            $('#templates').addEventListener('change', () => {
+            ui.templates.addEventListener('change', () => {
                 const selectedValue = templates.value;
 
                 // save off mapped values in case we want them later (e.g. change back to this chart)
                 const currentChart = findChart();
                 if (currentChart.chartDefinition)
-                    previousItemValues.set(currentChart.chartDefinition.id, allItems.map(it => itemValues.get(it) ?? 50))
+                    previousItemValues.set(currentChart.chartDefinition.id, allItems.map(item => itemValues.get(item) ?? 50))
 
+                // Find required charge
                 let chart = defaultData.chartDefinitions.find(chart => chart.id === selectedValue); //?.value;
                 if (!chart)
                     chart = defaultData.chartDefinitions.find(chart => chart.id === 'Default'); //?.value;
@@ -1411,6 +1589,7 @@
                     logoSrc = 'SiteLogo.png';
 
                 ui.chartLogo.src = 'images/' + logoSrc;
+                SetRandomBackdrop(chartDefinition.backdrops, Math.floor(chartDefinition.rnd * 999999));
 
                 ui.title.value = chartDefinition.title;
                 resizeTextarea(ui.title);
@@ -1419,7 +1598,6 @@
                 ui.chartData.style.height = ui.chartData.scrollHeight + 'px';
 
                 // Make sure existing items are cleared so no saved values are retained
-                // ToDo: Save to a map - can be restored if chart type is changed back again?
                 itemValues.clear();
 
                 // Attempt to restore values from previous save
@@ -1432,11 +1610,44 @@
                 rebuildAll();
             });
 
-            $('#axisLabelDefaults').addEventListener('change', () => {
-                const selectedValue = axisLabelDefaults.value;
-                ui.axisLabels.value = selectedValue || '';
-                rebuildAll();
+            ui.gradientQuickPick.addEventListener('change', () => {
+                GradientChanged(gradientQuickPick?.value || '');
             });
+
+            ui.gradientDefaults.addEventListener('change', () => {
+                GradientChanged(gradientDefaults?.value || '');
+            });
+
+            function GradientChanged(id) {
+                const gradient = defaultData.gradients.find(g => g.id === id);
+                if (!gradient) return;
+
+                // Build a radial gradient string
+                const gradientCSS = `radial-gradient(circle, ${gradient.stops
+                    .map(s => `${s.color} ${s.pos * 100}%`)
+                    .join(', ')})`;
+
+                currentGradient = gradient;
+
+                ui.gradientSwatch.style.background = gradientCSS;
+                draw();
+            }
+
+
+            ui.axisLabelDefaults.addEventListener('change', () => {
+                const selectedValue = axisLabelDefaults.value;
+                ui.axisLabelQuickPick.value = selectedValue || '';
+                ui.axisLabels.value = selectedValue || '';
+                rebuildControls();
+            });
+
+            ui.axisLabelQuickPick.addEventListener('change', () => {
+                const selectedValue = axisLabelQuickPick.value;
+                ui.axisLabelDefaults.value = selectedValue || '';
+                ui.axisLabels.value = selectedValue || '';
+                rebuildControls();
+            });
+
 
             $('#messageTemplates').addEventListener('change', () => {
                 ui.messageCore.value = messageTemplates?.value || '';
@@ -1514,6 +1725,11 @@
 
             $('#shareNewChart').addEventListener('click', () => {
                 shareChart(false);
+            });
+
+            $('#changeBackground').addEventListener('click', () => {
+                RandomBackdrop();
+                draw();
             });
 
             function shareChart(shareValues) {
@@ -1663,6 +1879,8 @@
 
                     chartParam = chartItem.data.map(line => line.trim()).join('\n');
 
+                    SetRandomBackdrop(chartItem.backdrops, Math.floor(chartItem.rnd * 999999));
+
                     if (logoParam = '')
                         logoParam = chartItem.logo;
                 }
@@ -1792,7 +2010,11 @@
                                 'Food=Chinese, Indian, Italian, Mexican, Japanese, Korean, Thai, English, Other',
                                 'Pets=Cats, Dogs, Fish, Birds, Reptiles, Other'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
+                            backdrops: [],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1809,7 +2031,11 @@
                                 'Dangerous=Chokes and_Strangles, Breath Play',
                                 'My Health=General Physical, General Mental, Fitness, Stamina'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Red-Green',
                             logo: 'PlayFighting',
+                            backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1826,7 +2052,11 @@
                                 'Dangerous=Chokes and_Strangles, Breath Play',
                                 'My Health=General Physical, General Mental, Fitness, Stamina'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Red-Green',
                             logo: 'PlayFighting',
+                            backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1843,14 +2073,18 @@
                                 'Stuff on me=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'You can touch my=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
+                            backdrops: ['General', 'Sexual', 'Spanking', 'Sensory'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
                     {
                         id: 'GeneralInterestYou',
                         definition: {
-                            title: 'General Interest\nOn Me',
+                            title: 'General Interest\nOn You',
                             data: ['I want to play with=Men, Woman, Bi, Trans, Group',
                                 'I want to do this with you=Spanking, Impact, Tickling, Sensory_Deprivation, Electro Play, Wax',
                                 'Sexual interaction=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
@@ -1860,7 +2094,11 @@
                                 'Stuff on you=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'Want to touch your=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
+                            backdrops: ['General', 'Sexual', 'Spanking', 'Sensory'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1877,23 +2115,31 @@
                                 'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
                                 'Misc.=Allergies, Lube'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Rainbow',
                             logo: 'Logo',
+                            backdrops: ['General', 'Wax', 'Sexual', 'Spanking', 'Sensory', 'Messy'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
                     {
-                        id: 'Wellbeing',
+                        id: 'WellBeing',
                         definition: {
                             title: 'Wellbeing',
-                            data: ['Emotional & Mood=Anxiety, Panic Attacks, Depression, PTSD, Bipolar Disorder, Self-Harm, Intrusive Thoughts, Insomnia',
-                                'Cognitive & Learning=ADHD, Dyslexia, OCD, Autism Spectrum Disorder, Schizophrenia, Substance Use Disorder',
-                                'Social & Interaction=Social Anxiety, Agoraphobia, Selective Mutism, Speech Impairment, Tourette Syndrome',
-                                'Sensory & Environment=Misophonia, Sensory Processing Disorder, Phobias',
-                                'Physical Hardship=Hyper-flexibility, Chronic_Pain, Arthritis, Joint_Problems, Back_Problems, Heart_Problems, Breathing_Problems, Hearing_Problems, Visual_Problems, Other',
-                                'Conditions=Asthma, Diabetes, Epilepsy, Migraines, Ehlers-Danlos_Syndrome, Fibromyalgia, IBS, Crohns_Disease, Colitis, Other',
-                                'Allergies=Nut, Animal, Pollen, Dust, Food, Medication, Other'
+                            data: ['Emotional & Mood=Anxiety, Panic_Attacks, Depression, PTSD, Bipolar Disorder, Self-Harm, Intrusive_Thoughts, Insomnia',
+                                'Social & Interaction=Social_Anxiety, Agoraphobia, Selective_Mutism, Speech_Impairment, Tourette_Syndrome',
+                                'Physical Hardship=Hyper_Flexibility, Chronic_Pain, Arthritis, Joint_Problems, Back_Problems, Heart_Problems, Breathing_Problems, Hearing_Problems, Visual_Problems, Other',
+                                'Sensory=Misophonia, Sensory_Processing_Disorder, Phobias',
+                                'Cognitive & Learning=ADHD, Dyslexia, Schizophrenia, Autism_Spectrum_Disorder, OCD, Substance_Use_Disorder',
+                                'Conditions=Other, Migraines, Fibromyalgia, Ehlers_Danlos_Syndrome, IBS, Colitis, Crohns_Disease, Epilepsy_Seizures, Diabetes, Asthma',
+                                'Allergies=Other, Nut, Animal, Pollen, Dust, Food, Medication'
                             ],
+                            defaultLabels: 'Sufferings',
+                            defaultGradient: 'Green-Red',
                             logo: 'Logo',
+                            backdrops: ['WellBeing'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1904,12 +2150,16 @@
                             data: ['Head Space=Pet Play, Age Play',
                                 'Servitude=Service, High Protocol, Worship, Chores, Homework',
                                 'Humiliation=Public Humiliation, Embarrassment, Cuckolding, Chastity, Financial_Domination',
-                                'Persona=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Voyeur, Exhibitionist, Primal',
+                                'Persona=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Brat, Voyeur, Exhibitionist, Primal',
                                 'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior_Modification',
                                 'Theatrics=Role Play, Scenes',
                                 'Words=Dirty Talk, Verbal_Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/boy'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Green-Red',
                             logo: 'Logo',
+                            backdrops: ['Relationship', 'AgePlay', 'RolePlay'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1921,7 +2171,11 @@
                                 'Where=Private, Public, BDSM_Clubs, CNC',
                                 'Dividend=Sexual Arousal, Partners Experience, Psychological_Satisfaction'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Green-Red',
                             logo: 'Logo',
+                            backdrops: ['Relationship', 'Caged'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1933,10 +2187,87 @@
                                 'Where=Private, Public, BDSM_Clubs, CNC',
                                 'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional_Release, Endorphin_Junky, Brat, Partners_Experience, Psychological_Satisfaction, Powerlessness, Challenging_Limits'
                             ],
+                            defaultLabels: 'Smiles',
+                            defaultGradient: 'Green-Red',
                             logo: 'Logo',
+                            backdrops: ['Relationship', 'Caged'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     }
+                ],
+
+                gradients: [
+                    {
+                        id: 'Red-Green',
+                        stops: [
+                            { pos: 0, color: 'rgba(255, 0, 0, 0.68)' },
+                            { pos: 1, color: 'rgba(0, 255, 0, 0.48)' }
+                        ]
+                    },
+                    {
+                        id: 'Green-Red',
+                        stops: [
+                            { pos: 0, color: 'rgba(0, 255, 0, 0.48)' },
+                            { pos: 1, color: 'rgba(255, 0, 0, 0.68)' }
+                        ]
+                    },
+                    {
+                        id: 'Red-Blue',
+                        stops: [
+                            { pos: 0, color: 'rgba(220, 20, 60, 0.48)' },   // Crimson red
+                            { pos: 1, color: 'rgba(65, 105, 225, 0.68)' }   // Royal blue
+                        ]
+                    },
+                    {
+                        id: 'Yellow-Green',
+                        stops: [
+                            { pos: 0, color: 'rgba(255, 215, 0, 0.48)' },   // Forest green
+                            { pos: 1, color: 'rgba(34, 139, 34, 0.68)' }    // Gold/yellow
+                        ]
+                    },
+                    {
+                        id: 'Rainbow',
+                        stops: [
+                            { pos: 0.0, color: 'rgba(255,   0,   0, 0.48)' },   // Red
+                            { pos: 0.16, color: 'rgba(255, 165,   0, 0.51)' },   // Orange
+                            { pos: 0.33, color: 'rgba(255, 255,   0, 0.54)' },   // Yellow
+                            { pos: 0.50, color: 'rgba(0,   128,   0, 0.57)' },   // Green
+                            { pos: 0.66, color: 'rgba(0,     0, 255, 0.60)' },   // Blue
+                            { pos: 0.83, color: 'rgba(75,    0, 244, 0.53)' },   // Indigo
+                            { pos: 1.0, color: 'rgba(238, 130, 238, 0.6)' }    // Violet
+                        ]
+                    },
+                    {
+                        id: 'Rainbow-Pastel',
+                        stops: [
+                            { pos: 0.0, color: 'rgba(255, 179, 186, 0.48)' },  // Pastel Red
+                            { pos: 0.16, color: 'rgba(255, 223, 186, 0.51)' },  // Pastel Orange
+                            { pos: 0.33, color: 'rgba(255, 255, 186, 0.54)' },  // Pastel Yellow
+                            { pos: 0.50, color: 'rgba(186, 255, 201, 0.57)' },  // Pastel Green
+                            { pos: 0.66, color: 'rgba(186, 225, 255, 0.60)' },  // Pastel Blue
+                            { pos: 0.83, color: 'rgba(201, 186, 255, 0.63)' },  // Pastel Indigo
+                            { pos: 1.0, color: 'rgba(255, 186, 255, 0.66)' }   // Pastel Violet
+                        ]
+                    }
+
+                ],
+
+                backdropCounts: [
+                    { id: 'AgePlay', count: 16 },
+                    { id: 'Caged', count: 15 },
+                    { id: 'Dangerous', count: 4 },
+                    { id: 'General', count: 30 },
+                    { id: 'Messy', count: 13 },
+                    { id: 'PlayFighting', count: 36 },
+                    { id: 'Relationship', count: 28 },
+                    { id: 'Reward', count: 18 },
+                    { id: 'RolePlay', count: 40 },
+                    { id: 'Sensory', count: 32 },
+                    { id: 'Sexual', count: 8 },
+                    { id: 'Spanking', count: 13 },
+                    { id: 'Wax', count: 4 },
+                    { id: 'WellBeing', count: 10 },
                 ],
 
                 axisLabels: [
@@ -1951,7 +2282,7 @@
                     { id: 'Moon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
                     { id: 'Person', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
                     { id: 'Smiles', description: 'Smiles 😡😭😢😕🫤😐🙂😃🤩', value: '😡,😭,😢,😕,🫤,😐,🙂,😃,🤩' },
-                    { id: 'Sufferings', description: 'Sufferings 🤩😃🙂😐🫤😕😢😭😡', value: '🤩,😃,🙂,😐,🫤,😕,😢,😭,😡' },
+                    { id: 'Sufferings', description: 'Sufferings 🤩😃🙂😐🫤😕😢😭', value: '🤩,😃,🙂,😐,🫤,😕,😢,😭' },
                     { id: 'Temperature', description: 'Temperature ❄️💧🔥', value: '❄️,💧,🔥' },
                     { id: 'Thumbs', description: 'Thumbs 👍👎', value: '👎,👍' },
                     { id: 'TThumbs', description: 'Thoughtful Thumbs 👍🤔👎', value: '👎,🤔,👍' },
@@ -1974,6 +2305,61 @@
                 ]
             }
 
+            var currentGradient = defaultData.gradients[0];
+
+            // Backdrops are taken as a random image from defined specific types of backdrop
+            // with a stable random number which allows us to re-produce the same random backdrop
+            // if we swap away from the current chart then back again.
+            // We can also purposefully randomize if required.
+            const backdropCounts = new Map(defaultData.backdropCounts.map(({ id, count }) => [id, count]));
+            var currentBackdrop = null;
+            var currentBackdropTypes = null;
+            var currentBackdropOffset = 0;
+            var backdropRnd;
+            randomizeBackdropRnd();
+
+            function RandomBackdrop() {
+                const oldBackdrop = currentBackdrop;
+                var count = 0;
+
+                // Make sure any new backdrop is different to the old one
+                // with an exit point just in case for some reason we can't find a different one after 10 tries
+                while (currentBackdrop === oldBackdrop && count < 10) {
+                    randomizeBackdropRnd();
+                    SetRandomBackdrop(currentBackdropTypes, currentBackdropOffset);
+                    count++;
+                }
+            }
+
+            function randomizeBackdropRnd() {
+                backdropRnd = Math.floor(Math.random() * 999999);
+            }
+
+            function SetRandomBackdrop(types, offset) {
+                if (!Array.isArray(types) || types.length === 0) {
+                    return null;
+                }
+
+                const index = (backdropRnd + offset) % types.length;
+                const value = types[index];
+
+                currentBackdropTypes = types;
+                currentBackdropOffset = offset;
+
+                currentBackdrop = GetBackdropImageUrl(value, offset);
+            }
+
+            function GetBackdropImageUrl(type, offset) {
+                if (backdropCounts.has(type)) {
+                    const count = backdropCounts.get(type);
+                    const index = (backdropRnd + offset) % count;
+
+                    return `backdrops/${type}/${String(index).padStart(3, '0')}.jpg`;
+                }
+
+                return null;
+            }
+
             function addPlaceholderOption(select, text = '-- Select a template --') {
                 const option = document.createElement('option');
                 option.textContent = text;
@@ -1984,6 +2370,24 @@
             }
 
             // Populate drop downs
+
+            // axis Gradients
+            addPlaceholderOption(ui.gradientDefaults, '-- Select a gradient --');
+            defaultData.gradients.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.id;
+                ui.gradientDefaults.appendChild(opt);
+            });
+
+            addPlaceholderOption(ui.gradientQuickPick, '-- Select a gradient --');
+            defaultData.gradients.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.id;
+                ui.gradientQuickPick.appendChild(opt);
+            });
+
             addPlaceholderOption(ui.templates);
             defaultData.chartDefinitions.forEach(({ id, definition }) => {
                 const option = document.createElement('option');
@@ -1992,12 +2396,20 @@
                 ui.templates.appendChild(option);
             });
 
-            addPlaceholderOption(ui.axisLabelDefaults);
+            addPlaceholderOption(ui.axisLabelDefaults, '-- Select a label set --');
             defaultData.axisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = description;
                 ui.axisLabelDefaults.appendChild(option);
+            });
+
+            addPlaceholderOption(ui.axisLabelQuickPick, '-- Select a label set --');
+            defaultData.axisLabels.forEach(({ description, value }) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = description;
+                ui.axisLabelQuickPick.appendChild(option);
             });
 
             addPlaceholderOption(ui.messageTemplates);
