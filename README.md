@@ -23,3 +23,12 @@ This project contains personal preference charts and consent-level visualization
 - This project aligns with GitHub’s Community Guidelines https://docs.github.com/en/site-policy/github-terms/github-community-guidelines.
 - No content promotes harm, coercion, or non-consensual behavior.
 - Contributors are expected to uphold ethical standards, privacy, and respect for autonomy.
+
+## To Do
+- [ ] Specify gradient choice in URL
+- [ ] Enable/disable backgrounds
+- [ ] Make sure runs ok with no backgrounds in place
+- [ ] Optimised (minified) version for faster load
+- [ ] More chart types
+- [ ] Better mapping of background examples to charts
+- [ ] Extra text defining chart purpose under title

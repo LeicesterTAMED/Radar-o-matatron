@@ -330,8 +330,8 @@
                 </select>
             </div>
             <div id="canvasButtons" class="buttons">
-                <button id="copyBtn" style="white-space: nowrap;">📋 Image to clipboard</button>
                 <button id="saveBtn" style="white-space: nowrap;">💾 Save image</button>
+                <button id="copyBtn" style="white-space: nowrap;">📋 Image to clipboard</button>
                 <button id="shareNewChart" style="white-space: nowrap;">🔗 Share link</button>
                 <button id="shareChart" style="white-space: nowrap;">🔗 Share with values</button>
             </div>
@@ -488,6 +488,8 @@
                 chartData: $('#chartData'),
                 title: $('#title'),
                 axisLabels: $('#axisLabels'),
+                axisLabelDefaults: $('#axisLabelDefaults'),
+                axisLabelQuickPick: $('#axisLabelQuickPick'),
                 gridStyle: $('#gridStyle'),
                 canvas: $('#chartCanvas'),
                 controls: $('#controls'),
@@ -499,8 +501,6 @@
                 rotateValueLabels: $('#rotateValueLabels'),
                 placeValueLabelsAtEdge: $('#placeValueLabelsAtEdge'),
                 templates: $('#templates'),
-                axisLabelDefaults: $('#axisLabelDefaults'),
-                axisLabelQuickPick: $('#axisLabelQuickPick'),
                 gradientDefaults: $('#gradientDefaults'),
                 gradientQuickPick: $('#gradientQuickPick'),
                 gradientSwatch: $('#gradientSwatch'),
@@ -630,25 +630,14 @@
 
                 if (savedValues == null) {
 
-                    console.log("NO SAVED VALUES - SAVING");
-                    console.log("itemvalues.entries", itemValues.entries());
                     const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
-                    console.log("all items", allItems);
                     allItems.forEach(item => {
-                        console.log("Setting", item);
-                        console.log("item.key", item.key);
-                        console.log("old.has", old.has(item.key));
-                        console.log("old.get", old.get(item.key));
                         itemValues.set(item, old.has(item.key) ? old.get(item.key) : 50);
                     });
-                    console.log("ITEM VALUES", itemValues);
                 }
                 else {
-                    console.log("SAVED VALUES");
                     let counter = 0;
                     allItems.forEach(item => {
-                        console.log("Item", item);
-                        console.log("saved", savedValues[counter]);
                         itemValues.set(item, savedValues[counter++]);
                     });
                     savedValues = null;
@@ -1541,7 +1530,7 @@
 
             // --- Events/EventListeners
             ui.chartData.addEventListener('input', debounce(rebuildAll, 200));
-            ui.axisLabels.addEventListener('input', debounce(rebuildAll, 100));
+            ui.axisLabels.addEventListener('input', debounce(rebuildControls, 100));
             ui.title.addEventListener('input', debounce(draw, 100));
             ui.gridStyle.addEventListener('change', draw);
             ui.messageStart.addEventListener('input', debounce(draw, 100));
@@ -1589,6 +1578,7 @@
                     logoSrc = 'SiteLogo.png';
 
                 ui.chartLogo.src = 'images/' + logoSrc;
+
                 SetRandomBackdrop(chartDefinition.backdrops, Math.floor(chartDefinition.rnd * 999999));
 
                 ui.title.value = chartDefinition.title;
@@ -1596,6 +1586,17 @@
                 ui.chartData.value = chartDefinition.data.map(line => line.trim()).join('\n');
                 ui.chartData.style.height = 'auto';
                 ui.chartData.style.height = ui.chartData.scrollHeight + 'px';
+
+                // Default axis labels
+                const axisLabelSet = defaultData.axisLabels.find(item => item.id === chartDefinition.defaultLabels);
+                if (axisLabelSet) {
+                    ui.axisLabelQuickPick.value = axisLabelSet.value;
+                    ui.axisLabels.value = axisLabelSet.value;
+                }
+
+                // Default gradient
+                ui.gradientQuickPick.value = chartDefinition.defaultGradient;
+                ChangeGradient(chartDefinition.defaultGradient, false);
 
                 // Make sure existing items are cleared so no saved values are retained
                 itemValues.clear();
@@ -1611,14 +1612,14 @@
             });
 
             ui.gradientQuickPick.addEventListener('change', () => {
-                GradientChanged(gradientQuickPick?.value || '');
+                ChangeGradient(ui.gradientQuickPick?.value || '');
             });
 
             ui.gradientDefaults.addEventListener('change', () => {
-                GradientChanged(gradientDefaults?.value || '');
+                ChangeGradient(ui.gradientDefaults?.value || '');
             });
 
-            function GradientChanged(id) {
+            function ChangeGradient(id, redraw = true) {
                 const gradient = defaultData.gradients.find(g => g.id === id);
                 if (!gradient) return;
 
@@ -1630,19 +1631,32 @@
                 currentGradient = gradient;
 
                 ui.gradientSwatch.style.background = gradientCSS;
-                draw();
+
+                if (redraw)
+                    draw();
             }
 
 
+            function ChangeLogo(id) {
+                let logoSrc = '';
+                if (id.length > 0)
+                    logoSrc = (defaultData.logos.find(item => item.id === id)?.filename);
+
+                if (!logoSrc)
+                    logoSrc = 'SiteLogo.png';
+
+                ui.siteLogo.src = 'images/' + logoSrc;
+            }
+
             ui.axisLabelDefaults.addEventListener('change', () => {
-                const selectedValue = axisLabelDefaults.value;
+                const selectedValue = ui.axisLabelDefaults.value;
                 ui.axisLabelQuickPick.value = selectedValue || '';
                 ui.axisLabels.value = selectedValue || '';
                 rebuildControls();
             });
 
             ui.axisLabelQuickPick.addEventListener('change', () => {
-                const selectedValue = axisLabelQuickPick.value;
+                const selectedValue = ui.axisLabelQuickPick.value;
                 ui.axisLabelDefaults.value = selectedValue || '';
                 ui.axisLabels.value = selectedValue || '';
                 rebuildControls();
@@ -1701,7 +1715,9 @@
                 setToast('✅ Image saved - check your downloads folder.');
             });
 
-            // Find chart will return a set of custom chart data if no chart is found which can be used as part of URLs
+            // Find chart will return an existing set of chart details
+            // or a set of custom definition data if no chart is found
+            // Allows users to generate their own charts on the fly while defaulting to existing where possible
             function findChart() {
                 // Check if defaults have flattened variants of data yet, and if not, do it!
                 if (defaultData.chartDefinitions[0].definition.flattenedData === '')
@@ -1735,10 +1751,24 @@
             function shareChart(shareValues) {
                 // Data combined into equivalent of single line with ; separators
                 let matchedChart = findChart();
-                if (matchedChart.chartDefinition)
+                let chart;
+
+                let gradientId = currentGradient.id;
+                let encodedGradient;
+
+                if (matchedChart.chartDefinition) {
                     chart = matchedChart.chartDefinition.id;
-                else
+
+                    if (gradientId != matchedChart.chartDefinition.definition.defaultGradient){
+                        encodedGradient = encodeURIComponent(gradientId);
+                    }
+                }
+                else {
                     chart = matchedChart.definitionData;
+
+                    if (gradientId != 'Red-Green')
+                        encodedGradient = encodeURIComponent(gradientId);
+                }
 
                 // else leave data alone, the string contains the data definition
                 const encodedData = encodeURIComponent(chart);
@@ -1758,6 +1788,7 @@
                 let encodedAxis;
                 if (axisLabels != 'Smiles')
                     encodedAxis = encodeURIComponent(axisLabels);
+
 
                 const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
                 // MessageCore replaces \n with ;_ for URL
@@ -1790,6 +1821,7 @@
                 const params = [
                     encodedTitle && `title=${encodedTitle}`,
                     encodedAxis && `axis=${encodedAxis}`,
+                    encodedGradient && `gradient=${encodedGradient}`,
                     encodedMessageStart && `start=${encodedMessageStart}`,
                     encodedMessageCore && `message=${encodedMessageCore}`,
                     encodedMessageEnd && `end=${encodedMessageEnd}`,
@@ -1829,6 +1861,7 @@
                 const params = new URLSearchParams(window.location.search);
                 let chartParam = params.get('chart') || '';     // default or overrides values if contains a =
                 let axisParam = params.get('axis') || '';     // axis id or overrides values if contains a ,
+                let gradientParam = params.get('gradient') || '';
                 let titleParam = params.get('title') || '';
                 let logoParam = params.get('logo')?.toLowerCase() || '';
                 let messageStartParam = params.get('start') || '';
@@ -1883,20 +1916,19 @@
 
                     if (logoParam = '')
                         logoParam = chartItem.logo;
+
+                    if (gradientParam = '')
+                        gradientParam = chartItem.defaultGradient;
                 }
 
                 uiSetTitle(titleParam); // Setting title also has to resize textarea
                 ui.chartData.value = chartParam;
 
                 // Logo
-                let logoSrc = '';
-                if (logoParam.length > 0)
-                    logoSrc = (defaultData.logos.find(item => item.id === logoParam)?.filename);
+                ChangeLogo(logoParam);
 
-                if (!logoSrc)
-                    logoSrc = 'SiteLogo.png';
-
-                ui.siteLogo.src = 'images/' + logoSrc;
+                // Gradient
+                ChangeGradient(gradientParam);
 
                 // Message
                 // Any message with a space in is treated as a custom message, else we look it up
@@ -2106,10 +2138,10 @@
                         id: 'GeneralPlay',
                         definition: {
                             title: 'General Play',
-                            data: ['Sensory=Impact, Strokes, Tickles, Sensory_Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
-                                'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                            data: ['Sensory=Impact, Caning, Tickles, Sensory_Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell, Pain',
+                                'Sexual=Oral_Receiving, Oral_Giving, Fisting, Fingering, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
                                 'Toys=Vibrators, Dildos, Butt Plus',
-                                'Restraint=Rope, Chains, Spreader Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
+                                'Restraint=Rope, Chains, Spreader_Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
                                 'Breath Play=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth, Postural',
                                 'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
@@ -2156,7 +2188,7 @@
                                 'Words=Dirty Talk, Verbal_Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/boy'
                             ],
                             defaultLabels: 'Smiles',
-                            defaultGradient: 'Green-Red',
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Relationship', 'AgePlay', 'RolePlay'],
                             rnd: Math.random(),
@@ -2172,7 +2204,7 @@
                                 'Dividend=Sexual Arousal, Partners Experience, Psychological_Satisfaction'
                             ],
                             defaultLabels: 'Smiles',
-                            defaultGradient: 'Green-Red',
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Relationship', 'Caged'],
                             rnd: Math.random(),
@@ -2188,7 +2220,7 @@
                                 'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional_Release, Endorphin_Junky, Brat, Partners_Experience, Psychological_Satisfaction, Powerlessness, Challenging_Limits'
                             ],
                             defaultLabels: 'Smiles',
-                            defaultGradient: 'Green-Red',
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Relationship', 'Caged'],
                             rnd: Math.random(),
@@ -2372,7 +2404,7 @@
             // Populate drop downs
 
             // axis Gradients
-            addPlaceholderOption(ui.gradientDefaults, '-- Select a gradient --');
+            addPlaceholderOption(ui.gradientDefaults, '-- Select gradient --');
             defaultData.gradients.forEach(g => {
                 const opt = document.createElement('option');
                 opt.value = g.id;
@@ -2380,7 +2412,7 @@
                 ui.gradientDefaults.appendChild(opt);
             });
 
-            addPlaceholderOption(ui.gradientQuickPick, '-- Select a gradient --');
+            addPlaceholderOption(ui.gradientQuickPick, '-- Select gradient --');
             defaultData.gradients.forEach(g => {
                 const opt = document.createElement('option');
                 opt.value = g.id;
@@ -2396,7 +2428,7 @@
                 ui.templates.appendChild(option);
             });
 
-            addPlaceholderOption(ui.axisLabelDefaults, '-- Select a label set --');
+            addPlaceholderOption(ui.axisLabelDefaults, '-- Select labels --');
             defaultData.axisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
@@ -2404,7 +2436,7 @@
                 ui.axisLabelDefaults.appendChild(option);
             });
 
-            addPlaceholderOption(ui.axisLabelQuickPick, '-- Select a label set --');
+            addPlaceholderOption(ui.axisLabelQuickPick, '-- Select labels --');
             defaultData.axisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
