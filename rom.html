@@ -2,8 +2,8 @@
 <html lang="en">
 <!--
     Radar-o-Matatron
-    v1.0.250910
-    (c) 2025
+    v1.1.251010
+    (c) 2025 - MisterB @ Leicester T.A.M.E.D.
 
     Notes:
         Main script initialization is called on document load
@@ -11,6 +11,7 @@
     URLs:
         GitHub: https://github.com/LeicesterTAMED/Radar-o-matatron
         Pages:  https://leicestertamed.github.io/Radar-o-matatron/rom.html
+        Mist3rBee (MisterB): https://fetlife.com/Mist3rBee
         LeicesterTAMED: https://fetlife.com/LeicesterTAMED
 
     ToDo:
@@ -258,6 +259,26 @@
             z-index: 999;
         }
 
+        .buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: center;
+            margin-top: 8px;
+            gap: 5px;
+        }
+
+        /* Highlighting slider areas can really mess with the experience, so we try and limit it */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+            /* Safari */
+            -moz-user-select: none;
+            /* Firefox */
+            -ms-user-select: none;
+            /* IE/Edge */
+        }
+
         @keyframes swing {
             0% {
                 transform: rotate(45deg);
@@ -302,31 +323,41 @@
             <div class="title" style="font-size: 24px;">Radar-o-Matatron</div>
             <div class="title" style="font-size: 10px; font-style: italic;">The chart maker with an overcomplicated
                 name!</div>
-            <div class="title" style="font-size: 18px;">Kinky Edition v1.0</div>
+            <div class="title" style="font-size: 18px;">Kinky Edition v1.1</div>
             <div id="chartType"
                 style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
                 <select id="templates">
                 </select>
             </div>
-            <div class="canvasWrap" style="margin-top: 10px;">
-                <canvas id="chartCanvas"></canvas>
-            </div>
-            <div id="canvasButtons"
-                style="display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; margin-top: 5px; gap: 5px;">
-                <button id="copyBtn" style="white-space: nowrap;">📋 Image to clipboard</button>
+            <div id="canvasButtons" class="buttons">
                 <button id="saveBtn" style="white-space: nowrap;">💾 Save image</button>
+                <button id="copyBtn" style="white-space: nowrap;">📋 Image to clipboard</button>
                 <button id="shareNewChart" style="white-space: nowrap;">🔗 Share link</button>
                 <button id="shareChart" style="white-space: nowrap;">🔗 Share with values</button>
             </div>
-            <div id="controls" class="controls"></div>
+            <div class="canvasWrap" style="margin-top: 10px;">
+                <canvas id="chartCanvas"></canvas>
+            </div>
+            <div id="extraButtons" class="buttons">
+                <select id="axisLabelQuickPick">
+                </select>
+                <button id="changeBackground" style="white-space: nowrap;">🔄 Change background</button>
+                <select id="gradientQuickPick">
+                </select>
+            </div>
+            <div id="controls" class="controls no-select"></div>
             <div style="margin-top: 12px;">
                 <div>
                     <label for="messageTemplates" style=><b>Message</b></label>
                     <select id="messageTemplates"></select>
                 </div>
-                <input id="messageStart" name="messageStart" type="text" autocomplete="on" />
                 <textarea id="messageCore" name="messageCore" spellcheck="false" autocomplete="on"></textarea>
-                <input id="messageEnd" name="messageEnd" type="text" autocomplete="on" />
+                <div style="display: flex; width: 100%; gap: 10px;">
+                    <div style="flex: 1">Person 1: <input id="person1" name="person1" type="text" autocomplete="on" />
+                    </div>
+                    <div style="flex: 1">Person 2: <input id="person2" name="person2" type="text" autocomplete="on" />
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -342,7 +373,8 @@
                     </div>
                     <div>
                         <label for="data"><b>Chart Definition</b></label>
-                        <div class="sub">Any changes to this will reset your values. Enter groups as Group=Item 1,Item 2,Item 3 etc. Put new groups on a new line.
+                        <div class="sub">Any changes to this will reset your values. Enter groups as Group=Item 1,Item
+                            2,Item 3 etc. Put new groups on a new line.
                             Put _ in items to split text across multiple lines in the graph.
                             Item's will appear in colour coordinated groups.</div>
                         <textarea id="chartData" spellcheck="false"></textarea>
@@ -353,6 +385,27 @@
                         <input id="axisLabels" type="text" />
                         <div class="hint">Labels order from centre of chart to outside. If no labels specified, will use
                             % instead.</div>
+                    </div>
+                    <div style="border-top: 1px solid var(--muted); padding-top: 12px;">
+                        <label for="gradientDefaults"><b>Highlighted gadient</b></label>
+                        <select id="gradientDefaults"></select>
+                        <!-- Swatch container -->
+                        <div style="position: relative; width: 128px; height: 128px; margin-top: 8px;">
+                            <!-- Background image layer -->
+                            <div id="swatchBackground" style="position: absolute; inset: 0;
+                background: url('images/SockGoblin.png') center/cover no-repeat;
+                background-size: 75%;
+                border-radius: 50%;
+                opacity: 0.5;">
+                            </div>
+
+                            <!-- Gradient overlay layer -->
+                            <div id="gradientSwatch" style="position: absolute; inset: 0;
+                border: 1px solid #ccc; border-radius: 50%;">
+                            </div>
+                        </div>
+
+                        <div class="hint">Gradient that fills from the middle out for chart values.</div>
                     </div>
                     <div>
                         <label for="polygonStyle"><b>Grid style</b></label>
@@ -365,8 +418,10 @@
                     <div>
                         <label><input type="checkbox" id="rotateLabels" checked>Rotate labels around chart</label>
                         <label><input type="checkbox" id="showValues" checked>Show values on points</label>
-                        <label><input type="checkbox" id="rotateValueLabels" checked>Rotate values around chart</label>
-                        <label><input type="checkbox" id="placeValueLabelsAtEdge" checked>Place the values around the
+                        <label><input type="checkbox" id="rotateValueLabels" checked>Rotate values around
+                            chart</label>
+                        <label><input type="checkbox" id="placeValueLabelsAtEdge" checked>Place the values around
+                            the
                             edge</label>
                     </div>
                 </div>
@@ -374,12 +429,53 @@
         </div>
 
         <div class="panel">
-            <div class="title" style="font-size: 16px;">(c) 2025 <a href="https://fetlife.com/LeicesterTAMED"
-                    aria-label="Link to Leicester TAMED fetlife page" target="_blank"
-                    rel="noopener noreferrer">Leicester T.A.M.E.D.</a></div>
+            <div class="row">
+                <button id="toggleDisclaimer">ℹ️ Toggle Disclaimer</button>
+            </div>
+            <div id="disclaimer" style="margin-top: 6px; display: none">
+                <p>This software and its contents are provided "as is", without warranty of any kind, express or
+                    implied. The author shall not be held liable for any damages or consequences arising from its use.
+                </p>
+
+                <p>These charts are not meant to be a definitive comprehensive analysis of any individual's preferences
+                    or person1lity. They are intended for entertainment and illustrative purposes only.</p>
+
+                <p>We recommend you use these charts as a start of a conversation, to indicate areas for exploration,
+                    and to help
+                    identify potential compatibilities or incompatibilities between partners.</p>
+
+                <p>You are welcome to use charts you create for yourself however you want, but please do not share or
+                    distribute charts that include person1l information about others without their explicit consent.
+                    We ask if you can please keep any branding or logos within the chart images to help us spread the
+                    good word of their existence.
+                <p>
+
+                <p>Chart definitions, design, visuals and functionality may change any any time and without warning as
+                    we
+                    further develop and refine the system.
+                <p>
+
+                <p>By using this software, you agree to do so responsibly and ethically, respecting the privacy and
+                    autonomy of all individuals involved.</p>
+
+                <p>Always seek informed consent before sharing or discussing any person1l information.</p>
+
+                <p>By accessing or using this system, you agree to these terms.</p>
+
+                <p>See the <a href="license.txt">license for additional details</a></p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="title" style="font-size: 16px;">(c) 2025 <a href="https://fetlife.com/Mist3rBee"
+                    ria-label="Mister Bee (Mist3rBee) fetlife page" target="_blank"
+                    rel="noopener noreferrer">Mist3rBee</a> @ <a href="https://fetlife.com/LeicesterTAMED"
+                    aria-label="Leicester TAMED fetlife page" target="_blank" rel="noopener noreferrer">Leicester
+                    T.A.M.E.D.</a></div>
         </div>
     </div>
 
+    Mist3rBee (MisterB):
     <script>
         (() => {
             // --- Utilities
@@ -428,62 +524,73 @@
             const ui = {
                 options: $('#options'),
                 toggleOptions: $('#toggleOptions'),
+                disclaimer: $('#disclaimer'),
+                toggleDisclaimer: $('#toggleDisclaimer'),
                 toast: $('#toast'),
                 siteLogo: $('#siteLogo'),
                 chartLogo: $('#chartLogo'),
                 chartData: $('#chartData'),
                 title: $('#title'),
                 axisLabels: $('#axisLabels'),
+                axisLabelDefaults: $('#axisLabelDefaults'),
+                axisLabelQuickPick: $('#axisLabelQuickPick'),
                 gridStyle: $('#gridStyle'),
                 canvas: $('#chartCanvas'),
                 controls: $('#controls'),
-                messageStart: $('#messageStart'),
+                person1: $('#person1'),
                 messageCore: $('#messageCore'),
-                messageEnd: $('#messageEnd'),
+                person2: $('#person2'),
                 rotateLabels: $('#rotateLabels'),
                 showValues: $('#showValues'),
                 rotateValueLabels: $('#rotateValueLabels'),
                 placeValueLabelsAtEdge: $('#placeValueLabelsAtEdge'),
                 templates: $('#templates'),
-                axisLabelDefaults: $('#axisLabelDefaults'),
+                gradientDefaults: $('#gradientDefaults'),
+                gradientQuickPick: $('#gradientQuickPick'),
+                gradientSwatch: $('#gradientSwatch'),
                 messageTemplates: $('#messageTemplates')
             };
 
+            const defaultAxisLabels = 'Default';
+
             const ctx = ui.canvas.getContext('2d');
 
-            // --- Draw lines of text to canvas down from start point
+            // --- Draw lines of text on canvas, down from start point
             function drawMultilineText(ctx, text, x, y, lineHeight, separator) {
                 const lines = text.split(separator);
                 lines.forEach((line, i) => {
+                    //ctx.strokeText(line, x, y + i * lineHeight);
                     ctx.fillText(line, x, y + i * lineHeight);
                 });
             }
 
-            // --- Draw lines of text to canvas up from start point
+            // --- Draw lines of text on canvas, up from start point
             function drawMultilineTextUp(ctx, text, x, y, lineHeight, separator) {
                 const lines = text.split(separator);
                 const totalHeight = (lines.length - 1) * lineHeight;
 
                 lines.forEach((line, i) => {
+                    //ctx.strokeText(line, x, y - totalHeight + i * lineHeight);
                     ctx.fillText(line, x, y - totalHeight + i * lineHeight);
                 });
 
             }
 
-            // --- Draw lines of text centered on the start point
+            // --- Draw lines of text on canvas, centered on the start point
             function drawMultilineTextCentered(ctx, text, x, y, lineHeight, separator) {
                 const lines = text.split(separator); // Split into lines
                 const totalHeight = (lines.length - 1) * lineHeight;
                 const startY = y - totalHeight / 2;
 
                 lines.forEach((line, i) => {
+                    //ctx.strokeText(line, x, startY + i * lineHeight);
                     ctx.fillText(line, x, startY + i * lineHeight);
                 });
 
             }
 
             // --- Parse Data into group and item structures
-            function parseData(input) {
+            function parseDataIntoGroups(input) {
                 const out = [];
                 const seenGroups = new Set();
                 input.split(/\r?\n/).forEach(line => {
@@ -513,11 +620,13 @@
                 return out;
             }
 
+            let itemAngleStepSize = 0;
+
             function computeAngles() {
                 const N = Math.max(1, allItems.length);
-                const step = (Math.PI * 2) / N;
+                itemAngleStepSize = ((Math.PI * 2) / N);
                 const start = -Math.PI / 2;
-                itemAngles = allItems.map((_, i) => start + i * step);
+                itemAngles = allItems.map((_, i) => start + i * itemAngleStepSize);
             }
 
             function assignColors() {
@@ -568,29 +677,36 @@
                 itemValues.clear();
 
                 if (savedValues == null) {
-                    const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
 
-                    allItems.forEach(it => {
-                        itemValues.set(it, old.has(it.key) ? old.get(it.key) : 50);
+                    const old = new Map([...itemValues.entries()].map(([item, val]) => [item.key, val]));
+                    allItems.forEach(item => {
+                        itemValues.set(item, old.has(item.key) ? old.get(item.key) : 50);
                     });
                 }
                 else {
                     let counter = 0;
-                    allItems.forEach(it => {
-                        itemValues.set(it, savedValues[counter++]);
+                    allItems.forEach(item => {
+                        itemValues.set(item, savedValues[counter++]);
                     });
                     savedValues = null;
                 }
 
                 ui.controls.innerHTML = '';
-                groups.forEach(g => {
+                groups.forEach(group => {
                     const fs = document.createElement('fieldset');
                     const legend = document.createElement('legend');
-                    legend.textContent = g.name;
-                    legend.style.color = groupColors.get(g.name);
+                    legend.textContent = group.name;
+                    legend.style.color = groupColors.get(group.name);
                     fs.appendChild(legend);
 
-                    g.items.forEach(item => {
+                    // Reverse items if required - keeps UX in order
+                    // after order on circle is reversed to improve the UX
+
+                    const itemsToRender = group.itemsReversed
+                        ? [...group.items].reverse()
+                        : group.items;
+
+                    itemsToRender.forEach(item => {
                         const row = document.createElement('div');
                         row.className = 'sliderRow';
 
@@ -628,18 +744,36 @@
                                 : `${v}%`;
 
                             sliderValue.textContent = label;
+
+                            // Throttle redraw on slider movement
+                            // const now = Date.now();
+                            // if (now - lastDraw > 250) {
+                            //     lastDraw = now;
+                            //     draw();
+                            // }
+
+                            // Always redraw on slider movement
+                            //draw();
+                        });
+
+                        // Redraw on slider completion
+                        slider.addEventListener('change', () => {
                             draw();
                         });
+
 
                         left.appendChild(slider);
                         row.appendChild(left);
                         row.appendChild(right);
+
                         fs.appendChild(row);
                     });
 
                     ui.controls.appendChild(fs);
                 });
             }
+
+            var lastDraw = 0;
 
             // --- Canvas sizing
             // Canvas is a fixed size (as we want to produce a fixed image size)
@@ -660,6 +794,293 @@
                 //ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
             }
 
+            // /**
+            // * Draws text smoothly bent around a circle by rotating each character
+            // * rotating and drawing them one at a time.
+            // * Also keeps text upright (flipping it over) on the bottom half of the circle.
+            // * Not pixel perfect but is fast and does a decent job.
+            // *
+            // * @param {CanvasRenderingContext2D} ctx
+            // * @param {string} text
+            // * @param {number} cx
+            // * @param {number} cy
+            // * @param {number} radius
+            // * @param {number} centerAngle       // radians, label centered at this angle
+            // * @param {string} font              // e.g. "16px sans-serif"
+            // * @param {string} fillStyle
+            // * @param {string} strokeStyle
+            // * @param {number} lineWidth
+            // */
+            function drawCurvedText(ctx, text, cx, cy, radius, centerAngle, font, fillStyle, strokeStyle, lineWidth = 1) {
+                ctx.save();
+
+                ctx.font = font;
+                ctx.fillStyle = fillStyle;
+                ctx.strokeStyle = strokeStyle;
+                ctx.lineWidth = lineWidth;
+                ctx.textBaseline = "middle";
+
+                // Normalize angle to [0, 2π)
+                const TWO_PI = Math.PI * 2;
+                const theta = ((centerAngle % TWO_PI) + TWO_PI) % TWO_PI;
+
+                // Flip condition: bottom half of circle (90°–270°)
+                const shouldFlip = (theta < 2 * Math.PI / 2);
+
+                // Measure total width
+                const metrics = ctx.measureText(text);
+                const textW = metrics.width;
+                const totalArc = textW / radius;
+
+                // If flipped, we’ll draw characters in reverse order
+                const chars = shouldFlip ? [...text].reverse() : [...text];
+
+                // We do this twice - once to stroke the text (create outlines in case any other gfx gets in its way such as Emjoi's)
+                // then fill text. If we stroke and fill per letter then the next letters stroke can overwrite pixels
+                // from the previous letters fill.
+
+                // We could buffer everything from the first pass and then draw the second pass based on calculated values
+                // but this will do for now.
+
+                let currentAngle = centerAngle - totalArc / 2;
+
+                for (let i = 0; i < chars.length; i++) {
+                    const char = chars[i];
+                    const charW = ctx.measureText(char).width;
+                    const charArc = charW / radius;
+                    const angle = currentAngle + charArc / 2;
+
+                    const dx = cx + radius * Math.cos(angle);
+                    const dy = cy + radius * Math.sin(angle);
+
+                    ctx.save();
+                    ctx.translate(dx, dy);
+                    ctx.rotate(angle + Math.PI / 2);
+
+                    if (shouldFlip)
+                        // Rotate 180° so glyphs are upright
+                        ctx.rotate(Math.PI);
+
+                    ctx.strokeText(char, 0, 0);
+                    //ctx.fillText(char, 0, 0);
+
+                    ctx.restore();
+
+                    currentAngle += charArc;
+                }
+
+                currentAngle = centerAngle - totalArc / 2;
+
+                for (let i = 0; i < chars.length; i++) {
+                    const char = chars[i];
+                    const charW = ctx.measureText(char).width;
+                    const charArc = charW / radius;
+                    const angle = currentAngle + charArc / 2;
+
+                    const dx = cx + radius * Math.cos(angle);
+                    const dy = cy + radius * Math.sin(angle);
+
+                    ctx.save();
+                    ctx.translate(dx, dy);
+                    ctx.rotate(angle + Math.PI / 2);
+
+                    if (shouldFlip)
+                        ctx.rotate(Math.PI);
+
+                    //ctx.strokeText(char, 0, 0);
+                    ctx.fillText(char, 0, 0);
+
+                    ctx.restore();
+
+                    currentAngle += charArc;
+                }
+
+                ctx.restore();
+            }
+
+            // /**
+            // * Draws text smoothly bent around a circle by slicing an offscreen canvas,
+            // * keeping text upright (flipping it over) on the bottom half of the circle.
+            // * This is not optimal in quality or performance, but does the job
+            // *
+            // * @param {CanvasRenderingContext2D} destCtx
+            // * @param {string} text
+            // * @param {number} cx
+            // * @param {number} cy
+            // * @param {number} radius
+            // * @param {number} centerAngle       // radians, label centered at this angle
+            // * @param {string} font              // e.g. "16px sans-serif"
+            // * @param {string} fillStyle
+            // * @param {string} strokeStyle
+            // * @param {number} lineWidth
+            // */
+            // function drawCurvedTextf(destCtx, text, cx, cy, radius, centerAngle, font, fillStyle, strokeStyle, lineWidth = 1) {
+            //     // Normalize angle to [0, 2π)
+            //     const TWO_PI = Math.PI * 2;
+            //     const theta = ((centerAngle % TWO_PI) + TWO_PI) % TWO_PI;
+
+            //     // Measure & render into offscreen canvas
+            //     const canvas = document.createElement('canvas');
+            //     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            //     ctx.font = font;
+
+            //     const m = ctx.measureText(text);
+            //     const textW = Math.ceil(m.width) + lineWidth * 2;
+            //     const fontSize = parseInt(font, 10) || 16;
+            //     const textH = Math.ceil(
+            //         (m.actualBoundingBoxAscent && m.actualBoundingBoxDescent)
+            //             ? (m.actualBoundingBoxAscent + m.actualBoundingBoxDescent)
+            //             : fontSize * 1.2
+            //     ) + lineWidth * 2;
+
+            //     canvas.width = textW;
+            //     canvas.height = textH;
+
+            //     ctx.font = font;
+            //     ctx.textBaseline = 'middle';
+            //     ctx.fillStyle = fillStyle;
+            //     ctx.strokeStyle = strokeStyle;
+            //     ctx.lineWidth = lineWidth;
+
+            //     // Draw baseline centered vertically
+            //     ctx.translate(lineWidth, textH / 2);
+
+            //     // Rotate text 180 degrees when on bottom half of circle so it always appears the correct way up
+            //     if (theta < 2 * Math.PI / 2) {
+            //         ctx.translate((textW - lineWidth * 2) / 2, 0);
+            //         ctx.rotate(Math.PI);
+            //         ctx.translate(-(textW - lineWidth * 2) / 2, 0);
+            //     }
+
+            //     ctx.strokeText(text, 0, 0);
+            //     ctx.fillText(text, 0, 0);
+
+            //     // arc span
+            //     const totalArc = textW / radius;
+            //     const startAngle = centerAngle - totalArc / 2;
+
+            //     // Slice & draw each 1-px column (reusing a small slice canvas)
+            //     const sliceCanvas = document.createElement('canvas');
+            //     sliceCanvas.width = 1;
+            //     sliceCanvas.height = textH;
+            //     const sliceCtx = sliceCanvas.getContext('2d');
+
+            //     for (let px = 0; px < textW; px++) {
+            //         // Reverse column order when flipped so reading stays left-to-right
+            //         const srcX = px;
+            //         const angle = startAngle + (px / textW) * totalArc;
+
+            //         sliceCtx.clearRect(0, 0, 1, textH);
+            //         sliceCtx.putImageData(ctx.getImageData(srcX, 0, 1, textH), 0, 0);
+
+            //         // Position on main canvas
+            //         destCtx.save();
+            //         const dx = cx + radius * Math.cos(angle);
+            //         const dy = cy + radius * Math.sin(angle);
+
+            //         // Tangent orientation
+            //         destCtx.translate(dx, dy);
+            //         destCtx.rotate(angle + Math.PI / 2);
+
+            //         destCtx.drawImage(sliceCanvas, 0, -textH / 2);
+
+            //         destCtx.restore();
+            //     }
+            // }
+
+            // Cache of loaded images by URL
+            const imageCache = new Map();
+
+            /**
+             * Draws an image as the canvas background, or white if not yet loaded.
+             * If the image is still loading, it will retry automatically once loaded.
+             *
+             * @param {CanvasRenderingContext2D} ctx
+             * @param {string} url - Image URL
+             */
+            function drawBackground(ctx, url, clip = false) {
+                const { canvas } = ctx;
+
+                // Already loaded and cached
+                if (imageCache.has(url)) {
+                    const cachedImage = imageCache.get(url);
+                    if (cachedImage.complete && !cachedImage.error && cachedImage.naturalWidth > 0) {
+                        // Normal draw
+                        //ctx.drawImage(cachedImage, 0,0, canvas.width, canvas.height);
+
+                        // Tiled draw
+                        // const tileWidth = cachedImage.width * 0.2;
+                        // const tileHeight = cachedImage.height * 0.2;
+
+                        // for (let y = 0; y < canvas.height; y += tileHeight) {
+                        //     for (let x = 0; x < canvas.width; x += tileWidth) {
+                        //     ctx.drawImage(cachedImage, x, y, tileWidth, tileHeight);
+                        //     }
+                        // }
+
+                        // Centre circle area draw
+                        const offset = 0.17;
+                        const size = 1 - (offset * 2);
+                        ctx.drawImage(cachedImage, canvas.width * offset, canvas.height * offset, canvas.width * size, canvas.height * size);
+
+                        // // Lighten overlay
+                        // ctx.globalAlpha = 0.82; // Adjust transparency (0.0 to 1.0)
+                        // ctx.fillStyle = '#ffffff'; // White overlay to lighten
+                        // ctx.fillRect(0,0, canvas.width, canvas.height);
+
+                        if (!clip) {
+                            // Circular clip
+                            ctx.globalCompositeOperation = 'destination-in';
+                            ctx.beginPath();
+                            ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, 0, Math.PI * 2);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.globalCompositeOperation = 'source-over'; // Reset to default
+
+                            const centerX = canvas.width * 0.5;
+                            const centerY = canvas.height * 0.5;
+                            const innerRadius = 0;
+                            const outerRadius = Math.max(canvas.width, canvas.height) * 0.5;
+
+                            const gradient = ctx.createRadialGradient(centerX, centerY, innerRadius, centerX, centerY, outerRadius);
+
+                            // Add color stops: white at center, transparent at edge
+                            gradient.addColorStop(0, 'rgba(255, 255, 255, .64)');
+                            gradient.addColorStop(0.7, 'rgba(255, 255, 255, 1)');
+
+                            ctx.fillStyle = gradient;
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        }
+
+                        // Reset alpha for future drawing
+                        //ctx.globalAlpha = 1.0;
+
+                        return;
+                    }
+                }
+
+                // Not loaded yet → draw white fallback
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // If we haven't started loading this URL, kick it off
+                if (!imageCache.has(url)) {
+                    const img = new Image();
+
+                    img.onload = () => {
+                        draw();
+                    };
+                    img.onerror = () => {
+                        img.error = true;
+                        // stays white background
+                    };
+
+                    img.src = url;
+                    imageCache.set(url, img);
+                }
+            }
+
+
             // --- Core Chart redraw
             function draw() {
                 resizeCanvas();
@@ -667,8 +1088,15 @@
                 const h = ui.canvas.height; //clientHeight || 600;
 
                 // ctx.clearRect(0, 0, w, h);
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+                //ctx.fillStyle = 'white';
+                //ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+
+                if (currentBackdrop == null) {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, ui.canvas.width, ui.canvas.height);
+                }
+                else
+                    drawBackground(ctx, currentBackdrop);
 
                 // layout
                 const cx = w / 2, cy = h / 2;
@@ -816,17 +1244,66 @@
                 // data polygons (main coloured area of chart)
                 {
                     if (allItems.length >= 2) {
+                        // ctx.beginPath();
+                        // allItems.forEach((it, i) => {
+                        //     const v = (itemValues.get(it) ?? 0) / 100;
+                        //     const r = v * chartRadius;
+                        //     const a = itemAngles[i];
+                        //     const x = Math.cos(a) * r;
+                        //     const y = Math.sin(a) * r;
+                        //     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                        // });
+                        // ctx.closePath();
+
+
+
+                        const radialWidth = itemAngleStepSize* .4;
+
                         ctx.beginPath();
+
                         allItems.forEach((it, i) => {
-                            const v = (itemValues.get(it) ?? 0) / 100;
-                            const r = v * chartRadius;
+                            const v = Math.max((itemValues.get(it) ?? 0) / 100, 0);
+                            //const reducedV = Math.max(v - 0.05, 0);
                             const a = itemAngles[i];
-                            const x = Math.cos(a) * r;
-                            const y = Math.sin(a) * r;
-                            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+
+                            //const rMain = v * chartRadius;
+                            const rSidePoints = v * chartRadius; //reducedV * chartRadius;
+
+                            const xBefore = Math.cos(a - radialWidth) * rSidePoints;
+                            const yBefore = Math.sin(a - radialWidth) * rSidePoints;
+
+                            //const xMain = Math.cos(a) * rMain;
+                           // const yMain = Math.sin(a) * rMain;
+
+                            const xAfter = Math.cos(a + radialWidth) * rSidePoints;
+                            const yAfter = Math.sin(a + radialWidth) * rSidePoints;
+
+                            if (i === 0) {
+                                ctx.moveTo(xBefore, yBefore);
+                            } else {
+                                ctx.lineTo(xBefore, yBefore);
+                            }
+
+                            //ctx.lineTo(xMain, yMain);
+                            ctx.lineTo(xAfter, yAfter);
                         });
+
                         ctx.closePath();
 
+
+
+
+
+
+
+                        // Fill with background image
+                        ctx.save();
+                        ctx.setTransform(1, 0, 0, 1, 0, 0);
+                        ctx.clip();
+                        drawBackground(ctx, currentBackdrop, true);
+                        ctx.restore();
+
+                        // Fill/overlay gradient
                         const canvas = ui.canvas;
                         const cx = canvas.width / 2;
                         const cy = canvas.height / 2;
@@ -834,8 +1311,12 @@
                         const outerRadius = Math.sqrt(cx * cx + cy * cy) * 0.5; // full diagonal reach
 
                         const grad = ctx.createRadialGradient(cx, cy, innerRadius, cx, cy, outerRadius);
-                        grad.addColorStop(0, 'rgba(255, 0, 0, 0.48)');
-                        grad.addColorStop(1, 'rgba(0, 255, 0, 0.48)');
+                        //grad.addColorStop(0, 'rgba(255, 0, 0, 0.68)');
+                        //grad.addColorStop(1, 'rgba(0, 255, 0, 0.48)');
+
+                        currentGradient.stops.forEach(stop => {
+                            grad.addColorStop(stop.pos, stop.color);
+                        });
 
                         ctx.save();
                         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -880,7 +1361,7 @@
                             // Points
                             ctx.beginPath();
                             ctx.arc(x, y, 5.5, 0, Math.PI * 2);
-                            ctx.strokeStyle = 'rgba(137,169,255,0.45)';
+                            ctx.strokeStyle = 'rgba(0,0,0,0.69)';
                             ctx.lineWidth = 1;
                             ctx.stroke();
 
@@ -922,10 +1403,13 @@
                 {
                     ctx.font = fontItemLabel;
                     const fontSize = parseInt(ctx.font.match(/\d+/)[0], 10);
-                    const lineHeight = fontSize * 1.2;
+                    const lineHeight = fontSize * 1.1;
 
                     let currentGroup = '';
                     let flipped = true;
+
+                    ctx.strokeStyle = 'rgba(255,255,255,1)';
+                    ctx.lineWidth = 5;
 
                     allItems.forEach((item, i) => {
                         const a = itemAngles[i];
@@ -953,6 +1437,7 @@
                                 flipped = false;
                             else if (flipped)
                                 ctx.rotate(Math.PI);
+
                             currentGroup = item.group;
 
                             // // Flipping ignoring group boundaries...
@@ -982,7 +1467,7 @@
                     });
                 }
 
-                // group labels (angled flat along the circle)
+                // Group labels
                 {
                     ctx.font = fontGroupLabel;
                     ctx.textBaseline = 'middle';
@@ -994,36 +1479,69 @@
                     ctx.strokeStyle = 'rgba(255,255,255,1)';
                     ctx.lineWidth = 5;
 
-                    groups.forEach(g => {
-                        const count = g.items.length;
-                        if (!count) return;
+                    const bendText = true;
 
-                        const midIndex = offset + (count - 1) / 2;
-                        const a = start + midIndex * step;
-                        const r = chartRadius + groupLabelsExtraRadius;
-                        const x = Math.cos(a) * r;
-                        const y = Math.sin(a) * r;
+                    // Render text curved around circle - higher overhead
+                    if (bendText) {
+                        groups.forEach(group => {
+                            const count = group.items.length;
+                            if (!count) return;
 
-                        ctx.save();
-                        ctx.translate(x, y);
+                            const midIndex = offset + (count - 1) / 2;
+                            const a = start + midIndex * step;
+                            const r = chartRadius + groupLabelsExtraRadius;
 
-                        // Rotate flat along the arc (tangential)
-                        const tangentAngle = a + Math.PI / 2;
-                        ctx.rotate(tangentAngle);
+                            // draw bent label centered at angle `angle`
+                            drawCurvedText(
+                                ctx,
+                                group.name,            // text
+                                0, 0,                  // cx, cy (we translate next)
+                                r,                     // radius
+                                a,                     // centerAngle
+                                fontGroupLabel,        // font
+                                rgba(groupColors.get(group.name), 0.95),
+                                'rgba(255,255,255,1)', // Wite stroke to make sure letters are always visible if over image
+                                5                      // stroke width
+                            );
 
-                        // Flip upside-down labels for readability
-                        if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2)
-                            ctx.rotate(Math.PI);
+                            offset += count;
+                        });
+                    }
+                    else {
+                        groups.forEach(group => {
+                            const count = group.items.length;
+                            if (!count) return;
 
-                        ctx.textAlign = 'center';
+                            const midIndex = offset + (count - 1) / 2;
+                            const a = start + midIndex * step;
+                            const r = chartRadius + groupLabelsExtraRadius;
+                            const x = Math.cos(a) * r;
+                            const y = Math.sin(a) * r;
 
-                        ctx.fillStyle = rgba(groupColors.get(g.name), 0.95);
-                        ctx.strokeText(g.name, 0, 0);
-                        ctx.fillText(g.name, 0, 0);
-                        ctx.restore();
+                            ctx.save();
+                            ctx.translate(x, y);
 
-                        offset += count;
-                    });
+                            // Rotate flat along the arc (tangential)
+                            const tangentAngle = a + Math.PI / 2;
+                            ctx.rotate(tangentAngle);
+
+                            // Flip upside-down labels for readability
+                            if (tangentAngle > Math.PI / 2 && tangentAngle < (3 * Math.PI) / 2)
+                                ctx.rotate(Math.PI);
+
+                            ctx.textAlign = 'center';
+
+                            ctx.fillStyle = rgba(groupColors.get(group.name), 0.95);
+                            //ctx.strokeText(group.name, 0, 0);
+                            ctx.fillText(group.name, 0, 0);
+
+                            ctx.restore();
+
+                            offset += count;
+                        });
+
+                    }
+
                 }
 
                 // radial item separation lines (rendered at end to ensure always visible)
@@ -1062,20 +1580,21 @@
                 ctx.fillText(formattedDate, ui.canvas.width - 16, ui.canvas.height - 10); //els.canvas.width / 2, 16);
                 ctx.restore();
 
-                let msg = ui.messageCore.value.trim();
+                let msg = GetMessage(); // ui.messageCore.value.trim();
                 if (msg.length > 0) {
+                    // const start = ui.person1.value.trim();
+                    // if (start.length > 0)
+                    //     msg = start + ' ' + msg;
+                    // // else
+                    // //     if (msg.startsWith("X "))
+                    // //         msg = 'Someone ' + msg.slice(2);
 
-                    const start = ui.messageStart.value.trim();
-                    if (start.length > 0)
-                        msg = start + ' ' + msg;
-                    else
-                        msg = 'Someone ' + msg;
-
-                    const end = ui.messageEnd.value.trim();
-                    if (end.length > 0)
-                        msg += ' ' + end;
-                    else
-                        msg += ' someone else';
+                    // const end = ui.person2.value.trim();
+                    // if (end.length > 0)
+                    //     msg += ' ' + end;
+                    // // else
+                    // //     if (msg.endsWith(" Y"))
+                    // //         msg = msg.slice(0, -2) + ' someone else';
 
                     ctx.save();
                     ctx.font = fontMessage;
@@ -1087,10 +1606,47 @@
                 }
             }
 
-            // --- Processing/Generation of all elements
+            // --- Processing/Generation of all elements for a chart
             function rebuildAll() {
-                groups = parseData(ui.chartData.value);
+                groups = parseDataIntoGroups(ui.chartData.value);
+
+                // Once we have all our groups, go through them again
+                // and for any groups who's completely appear after the half way render
+                // point around the circle (i.e. on left side of circle)
+                // we reverse the order of their items to account
+                // for reading order reversal when text is flipped upside down.
+                // Also sets a flag so the slider rendering code can
+                // render that set of sliders non-reversed
+
+                // All this done so person writing
+                // chart doesn't have to worry about manually reversing their
+                // chart definitions in a way that makes the UX more readable
+                // e.g. `Other` item often found at end of list remains
+                // at the end of the list visually
+                const itemCount = groups.reduce((sum, group) => sum + group.items.length, 0);
+                const halfItemCount = itemCount * 0.5;
+
+                let runningCount = 0;
+                let reversalTriggered = false;
+
+                for (const group of groups) {
+
+                    if (reversalTriggered) {
+                        group.items.reverse();
+                        group.itemsReversed = true;
+                    }
+                    else {
+                        runningCount += group.items.length;
+                        group.itemsReversed = false;
+
+                        if (runningCount > halfItemCount) {
+                            reversalTriggered = true;
+                        }
+                    }
+                }
+
                 allItems = groups.flatMap(g => g.items);
+
                 computeAngles();
                 assignColors();
                 axis = parseAxisLabels(ui.axisLabels.value);
@@ -1098,16 +1654,27 @@
                 draw();
             }
 
+            // --- Lighter weight rebuild of controls only (e.g. axis label changes)
+            function rebuildControls() {
+                // Make sure we have a saved set of values to rebuild controls
+                savedValues = allItems.map(item => itemValues.get(item) ?? 50);
+
+                axis = parseAxisLabels(ui.axisLabels.value);
+                buildControls();
+                draw();
+            }
+
             // --- Events/EventListeners
             ui.chartData.addEventListener('input', debounce(rebuildAll, 200));
-            ui.axisLabels.addEventListener('input', debounce(rebuildAll, 100));
+            ui.axisLabels.addEventListener('input', debounce(rebuildControls, 100));
             ui.title.addEventListener('input', debounce(draw, 100));
             ui.gridStyle.addEventListener('change', draw);
-            ui.messageStart.addEventListener('input', debounce(draw, 100));
-            ui.messageCore.addEventListener('input', debounce(draw, 100));
-            ui.messageEnd.addEventListener('input', debounce(draw, 100));
+            ui.person1.addEventListener('change', debounce(draw, 100));
+            ui.messageCore.addEventListener('change', debounce(draw, 100));
+            ui.person2.addEventListener('change', debounce(draw, 100));
             ui.chartLogo.addEventListener('load', draw); // --- Redraw on image load (so appears in chart, will be missing at start)
             ui.toggleOptions.addEventListener('click', toggleOptions);
+            ui.toggleDisclaimer.addEventListener('click', function () { ui.disclaimer.style.display = ui.disclaimer.style.display === 'none' ? 'block' : 'none'; });
 
             // Auto sizing textareas
             document.querySelectorAll('textarea').forEach(textarea => {
@@ -1126,14 +1693,15 @@
 
             const previousItemValues = new Map();
 
-            $('#templates').addEventListener('change', () => {
+            ui.templates.addEventListener('change', () => {
                 const selectedValue = templates.value;
 
                 // save off mapped values in case we want them later (e.g. change back to this chart)
                 const currentChart = findChart();
                 if (currentChart.chartDefinition)
-                    previousItemValues.set(currentChart.chartDefinition.id, allItems.map(it => itemValues.get(it) ?? 50))
+                    previousItemValues.set(currentChart.chartDefinition.id, allItems.map(item => itemValues.get(item) ?? 50))
 
+                // Find required charge
                 let chart = defaultData.chartDefinitions.find(chart => chart.id === selectedValue); //?.value;
                 if (!chart)
                     chart = defaultData.chartDefinitions.find(chart => chart.id === 'Default'); //?.value;
@@ -1148,14 +1716,26 @@
 
                 ui.chartLogo.src = 'images/' + logoSrc;
 
+                SetRandomBackdrop(chartDefinition.backdrops, Math.floor(chartDefinition.rnd * 999999));
+
                 ui.title.value = chartDefinition.title;
                 resizeTextarea(ui.title);
                 ui.chartData.value = chartDefinition.data.map(line => line.trim()).join('\n');
                 ui.chartData.style.height = 'auto';
                 ui.chartData.style.height = ui.chartData.scrollHeight + 'px';
 
+                // Default axis labels
+                const axisLabelSet = defaultData.axisLabels.find(item => item.id === (chartDefinition.defaultLabels ?? defaultAxisLabels));
+                if (axisLabelSet) {
+                    ui.axisLabelQuickPick.value = axisLabelSet.value;
+                    ui.axisLabels.value = axisLabelSet.value;
+                }
+
+                // Default gradient
+                ui.gradientQuickPick.value = chartDefinition.defaultGradient;
+                ChangeGradient(chartDefinition.defaultGradient, false);
+
                 // Make sure existing items are cleared so no saved values are retained
-                // ToDo: Save to a map - can be restored if chart type is changed back again?
                 itemValues.clear();
 
                 // Attempt to restore values from previous save
@@ -1168,21 +1748,79 @@
                 rebuildAll();
             });
 
-            $('#axisLabelDefaults').addEventListener('change', () => {
-                const selectedValue = axisLabelDefaults.value;
-                ui.axisLabels.value = selectedValue || '';
-                rebuildAll();
+            ui.gradientQuickPick.addEventListener('change', () => {
+                ChangeGradient(ui.gradientQuickPick?.value || '');
             });
 
-            $('#messageTemplates').addEventListener('change', () => {
-                ui.messageCore.value = messageTemplates?.value || '';
+            ui.gradientDefaults.addEventListener('change', () => {
+                ChangeGradient(ui.gradientDefaults?.value || '');
+            });
+
+            function ChangeGradient(id, redraw = true) {
+                const gradient = defaultData.gradients.find(g => g.id === id);
+                if (!gradient) return;
+
+                // Build a radial gradient string
+                const gradientCSS = `radial-gradient(circle, ${gradient.stops
+                    .map(s => `${s.color} ${s.pos * 100}%`)
+                    .join(', ')})`;
+
+                currentGradient = gradient;
+
+                ui.gradientSwatch.style.background = gradientCSS;
+
+                if (redraw)
+                    draw();
+            }
+
+
+            function ChangeLogo(id) {
+                let logoSrc = '';
+                if (id.length > 0)
+                    logoSrc = (defaultData.logos.find(item => item.id === id)?.filename);
+
+                if (!logoSrc)
+                    logoSrc = 'SiteLogo.png';
+
+                ui.siteLogo.src = 'images/' + logoSrc;
+            }
+
+            ui.axisLabelDefaults.addEventListener('change', () => {
+                const selectedValue = ui.axisLabelDefaults.value;
+                ui.axisLabelQuickPick.value = selectedValue || '';
+                ui.axisLabels.value = selectedValue || '';
+                rebuildControls();
+            });
+
+            ui.axisLabelQuickPick.addEventListener('change', () => {
+                const selectedValue = ui.axisLabelQuickPick.value;
+                ui.axisLabelDefaults.value = selectedValue || '';
+                ui.axisLabels.value = selectedValue || '';
+                rebuildControls();
+            });
+
+
+            function GetMessage() {
+                let msg = ui.messageCore.value || '';
+
+                var person1 = ui.person1.value?.trim() || '';
+                if (person1 != '')
+                    msg = msg.replace('Person 1', person1);
+
+                var person2 = ui.person2.value?.trim() || '';
+                if (person2 != '')
+                    msg = msg.replace('Person 2', person2);
+
+                return msg;
+            }
+
+            ui.messageTemplates.addEventListener('change', () => {
+                let msg = messageTemplates?.value || '';
+
+                ui.messageCore.value = msg;
                 resizeTextarea(ui.messageCore);
 
-                if (ui.messageStart.value.trim().length === 0 && msg.length > 0)
-                    ui.messageStart.value = 'Person A';
-
-                if (ui.messageEnd.value.trim().length === 0 && msg.length > 0)
-                    ui.messageEnd.value = 'Person B';
+                messageTemplates.selectedIndex = 0;
 
                 draw();
             });
@@ -1226,7 +1864,9 @@
                 setToast('✅ Image saved - check your downloads folder.');
             });
 
-            // Find chart will return a set of custom chart data if no chart is found which can be used as part of URLs
+            // Find chart will return an existing set of chart details
+            // or a set of custom definition data if no chart is found
+            // Allows users to generate their own charts on the fly while defaulting to existing where possible
             function findChart() {
                 // Check if defaults have flattened variants of data yet, and if not, do it!
                 if (defaultData.chartDefinitions[0].definition.flattenedData === '')
@@ -1252,13 +1892,32 @@
                 shareChart(false);
             });
 
+            $('#changeBackground').addEventListener('click', () => {
+                RandomBackdrop();
+                draw();
+            });
+
             function shareChart(shareValues) {
                 // Data combined into equivalent of single line with ; separators
                 let matchedChart = findChart();
-                if (matchedChart.chartDefinition)
+                let chart;
+
+                let gradientId = currentGradient.id;
+                let encodedGradient;
+
+                if (matchedChart.chartDefinition) {
                     chart = matchedChart.chartDefinition.id;
-                else
+
+                    if (gradientId != matchedChart.chartDefinition.definition.defaultGradient) {
+                        encodedGradient = encodeURIComponent(gradientId);
+                    }
+                }
+                else {
                     chart = matchedChart.definitionData;
+
+                    if (gradientId != 'Red-Green')
+                        encodedGradient = encodeURIComponent(gradientId);
+                }
 
                 // else leave data alone, the string contains the data definition
                 const encodedData = encodeURIComponent(chart);
@@ -1276,13 +1935,14 @@
                     axisLabels = matchingAxisLabelsDefault.id;
                 // Don't bother with axis labels if we are using the default
                 let encodedAxis;
-                if (axisLabels != 'Smiles')
+                if (axisLabels != defaultAxisLabels)
                     encodedAxis = encodeURIComponent(axisLabels);
 
-                const encodedMessageStart = encodeURIComponent(ui.messageStart.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
+
+                const encodedperson1 = encodeURIComponent(ui.person1.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
                 // MessageCore replaces \n with ;_ for URL
                 const encodedMessageCore = encodeURIComponent(ui.messageCore.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
-                const encodedMessageEnd = encodeURIComponent(ui.messageEnd.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
+                const encodedperson2 = encodeURIComponent(ui.person2.value.trim().replaceAll(' ', '.').replaceAll('\n', '_'));
 
                 // Values
                 let valueList;
@@ -1310,9 +1970,10 @@
                 const params = [
                     encodedTitle && `title=${encodedTitle}`,
                     encodedAxis && `axis=${encodedAxis}`,
-                    encodedMessageStart && `start=${encodedMessageStart}`,
+                    encodedGradient && `gradient=${encodedGradient}`,
+                    encodedperson1 && `person1=${encodedperson1}`,
                     encodedMessageCore && `message=${encodedMessageCore}`,
-                    encodedMessageEnd && `end=${encodedMessageEnd}`,
+                    encodedperson2 && `person2=${encodedperson2}`,
                     rotateLabelsParam,
                     showValuesParam,
                     rotateValuesParam,
@@ -1349,11 +2010,12 @@
                 const params = new URLSearchParams(window.location.search);
                 let chartParam = params.get('chart') || '';     // default or overrides values if contains a =
                 let axisParam = params.get('axis') || '';     // axis id or overrides values if contains a ,
+                let gradientParam = params.get('gradient') || '';
                 let titleParam = params.get('title') || '';
                 let logoParam = params.get('logo')?.toLowerCase() || '';
-                let messageStartParam = params.get('start') || '';
+                let person1Param = params.get('person1') || '';
                 let messageCoreParam = params.get('message') || '';
-                let messageEndParam = params.get('end') || '';
+                let person2Param = params.get('person2') || '';
                 let existingValuesParam = params.get('values') || '';
                 let rotateLabelsParam = params.get('rl') || 'true';     // Rotate Labels
                 let showValuesParam = params.get('sv') || 'true';       // Show Values
@@ -1366,7 +2028,7 @@
 
                 // Axis
                 if (!axisParam || axisParam.length == 0)
-                    axisParam = defaultData.axisLabels.find(item => item.id === 'Smiles')?.value || '';  // default if nothing specified
+                    axisParam = defaultData.axisLabels.find(item => item.id === defaultAxisLabels)?.value || defaultAxisLabels;  // default if nothing specified
                 else if (!axisParam.includes(',')) {
                     // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
                     matchedDefault = defaultData.axisLabels.find(item => item.id === axisParam);
@@ -1399,22 +2061,23 @@
 
                     chartParam = chartItem.data.map(line => line.trim()).join('\n');
 
+                    SetRandomBackdrop(chartItem.backdrops, Math.floor(chartItem.rnd * 999999));
+
                     if (logoParam = '')
                         logoParam = chartItem.logo;
+
+                    if (gradientParam = '')
+                        gradientParam = chartItem.defaultGradient;
                 }
 
                 uiSetTitle(titleParam); // Setting title also has to resize textarea
                 ui.chartData.value = chartParam;
 
                 // Logo
-                let logoSrc = '';
-                if (logoParam.length > 0)
-                    logoSrc = (defaultData.logos.find(item => item.id === logoParam)?.filename);
+                ChangeLogo(logoParam);
 
-                if (!logoSrc)
-                    logoSrc = 'SiteLogo.png';
-
-                ui.siteLogo.src = 'images/' + logoSrc;
+                // Gradient
+                ChangeGradient(gradientParam);
 
                 // Message
                 // Any message with a space in is treated as a custom message, else we look it up
@@ -1429,19 +2092,19 @@
 
                 let hasCoreMessage = msg.length > 0;
 
-                if (messageStartParam.length > 0)
-                    msg = messageStartParam.replaceAll('.', ' ').replaceAll('_', '\n');
+                if (person1Param.length > 0)
+                    msg = person1Param.replaceAll('.', ' ').replaceAll('_', '\n');
                 else
                     if (hasCoreMessage)
-                        msg = 'Person A';
-                ui.messageStart.value = msg;
+                        msg = 'Person 1';
+                ui.person1.value = msg;
 
-                if (messageEndParam.length > 0)
-                    msg = messageEndParam.replaceAll('.', ' ').replaceAll('_', '\n');
+                if (person2Param.length > 0)
+                    msg = person2Param.replaceAll('.', ' ').replaceAll('_', '\n');
                 else
                     if (hasCoreMessage)
-                        msg = 'Person B';
-                ui.messageEnd.value = msg;
+                        msg = 'Person 2';
+                ui.person2.value = msg;
 
                 // Extra options - most of the time these will be using defaults
 
@@ -1521,48 +2184,118 @@
                     {
                         id: 'Default',
                         definition: {
-                            title: 'Example\nI Like',
+                            title: 'Example',
+                            details: 'This is an example chart,\nto give you an idea\nwhat it can do!',
                             data: ['Nature=Hiking, Forrest, Jungle, Mountains, Lakes, Rivers, Waterfalls, Tundra, Sandy, Snowy, Desert, Caves',
                                 'Media=Books, Films, Games, Music, Art, Photography',
                                 'Music=Electronic, Pop, Rock, HipHop, Country, Jazz, Classical, Other',
                                 'Food=Chinese, Indian, Italian, Mexican, Japanese, Korean, Thai, English, Other',
                                 'Pets=Cats, Dogs, Fish, Birds, Reptiles, Other'
                             ],
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
+                            backdrops: [],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
                     {
-                        id: 'PlayFighting101',
+                        id: 'PlayFightingMe',
                         definition: {
-                            title: 'Play Fighting 101',
-                            data: ['Equipment=Rope, Blindfolds, Crops etc.',
-                                'Pleasure=Groping,Sensual_touching_teasing',
-                                'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
-                                'Physical=Biting, Scratching, Bruises, To_Exhaustion',
+                            title: 'Play Fighting\nOn Me',
+                            data: ['Equipment=Rope, Blindfolds, Restraints, Crops etc.',
                                 'Impact=Stingy, Thuddy, Slaps, Spanks',
-                                'Psychological=Degradation, Praise',
+                                'Pleasure=Groping,Sensual_touching_teasing',
+                                'Control me by=Overwhelming_me, Give me_a chance, Hair, Pressure_Points, Pain',
+                                'Physical on me=Biting, Scratching, Bruises, To_Exhaustion',
+                                'Psychological=Praise, Degradation, Smack Talk',
                                 'Dangerous=Chokes and_Strangles, Breath Play',
-                                'My Health=General Physical, General Mental, Fitness, Stamina'
+                                'My Health=General_Physical, General_Mental, Fitness, Stamina'
                             ],
+                            defaultGradient: 'Red-Green',
                             logo: 'PlayFighting',
+                            backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
                     {
-                        id: 'PlayFighting',
+                        id: 'PlayFightingYou',
                         definition: {
-                            title: 'Play Fighting',
-                            data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops_Floggers_etc.',
-                                'Pleasure=Groping,Sensual_touching_teasing, Sex toys_external, Sex toys_internal',
-                                'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
-                                'Physical Harm=Biting, Scratching, Bruises',
-                                'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
-                                'Psychological=Degradation, Praise',
+                            title: 'Play Fighting\nOn You',
+                            data: ['Equipment=Rope, Blindfolds, Restraints, Crops etc.',
+                                'Impact=Slaps, Spanks',
+                                'Pleasure=Groping,Sensual_touching_teasing',
+                                'Control you with=Overwhelm_you, Give you_a chance, Hair, Pressure_Points, Pain',
+                                'Physical on you=Biting, Scratching, Bruises, To_Exhaustion',
+                                'Psychological=Praise, Degradation, Smack Talk',
                                 'Dangerous=Chokes and_Strangles, Breath Play',
-                                'My Health=General Physical, General Mental, Fitness, Stamina'
+                                'My Health=General_Physical, General_Mental, Fitness, Stamina'
                             ],
+                            defaultGradient: 'Red-Green',
                             logo: 'PlayFighting',
+                            backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
+                            rnd: Math.random(),
+                            flattenedData: ''
+                        }
+                    },
+                    // {
+                    //     id: 'PlayFighting',
+                    //     definition: {
+                    //         title: 'Play Fighting',
+                    //         data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops_Floggers_etc.',
+                    //             'Pleasure=Groping,Sensual_touching_teasing, Sex toys_external, Sex toys_internal',
+                    //             'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
+                    //             'Physical Harm=Biting, Scratching, Bruises',
+                    //             'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
+                    //             'Psychological=Degradation, Praise',
+                    //             'Dangerous=Chokes and_Strangles, Breath Play',
+                    //             'My Health=General Physical, General Mental, Fitness, Stamina'
+                    //         ],
+                    //         defaultGradient: 'Red-Green',
+                    //         logo: 'PlayFighting',
+                    //         backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
+                    //         rnd: Math.random(),
+                    //         flattenedData: ''
+                    //     }
+                    // },
+                    {
+                        id: 'GeneralInterestMe',
+                        definition: {
+                            title: 'General Interest\nOn Me',
+                            data: ['I want to play with=Men, Woman, Bi, Trans, Group',
+                                'Type of play on me=Spanking, Impact, Tickling, Sensory_Deprivation, Electro Play, Wax',
+                                'Sexual interaction=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                                'Toys=Vibrators, Dildos, Butt Plus',
+                                'Restraints=Rope, Restraints, Spreader_Bars, Tape, Gags, Blindfolds, Hoods',
+                                'More dangerous=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth',
+                                'Stuff on me=Cum, Spit, Blood, Urine, Scat, Vomit',
+                                'You can touch my=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
+                            ],
+                            defaultGradient: 'Red-Green',
+                            logo: 'Logo',
+                            backdrops: ['General', 'Sexual', 'Spanking', 'Sensory'],
+                            rnd: Math.random(),
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'GeneralInterestYou',
+                        definition: {
+                            title: 'General Interest\nOn You',
+                            data: ['I want to play with=Men, Woman, Bi, Trans, Group',
+                                'I want to do this with you=Spanking, Impact, Tickling, Sensory_Deprivation, Electro Play, Wax',
+                                'Sexual interaction=Oral, Fingering, Fisting, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                                'Use toys on you=Vibrators, Dildos, Butt Plus',
+                                'Restraints=Rope, Restraints, Spreader_Bars, Tape, Gags, Blindfolds, Hoods',
+                                'More dangerous=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth',
+                                'Stuff on you=Cum, Spit, Blood, Urine, Scat, Vomit',
+                                'Want to touch your=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
+                            ],
+                            defaultGradient: 'Red-Green',
+                            logo: 'Logo',
+                            backdrops: ['General', 'Sexual', 'Spanking', 'Sensory'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1570,32 +2303,97 @@
                         id: 'GeneralPlay',
                         definition: {
                             title: 'General Play',
-                            data: ['Sensory=Impact, Strokes, Tickles, Sensory_Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell',
-                                'Sexual=Oral Receiving, Oral Giving, Fisting, Fingering, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
+                            data: ['Sensory=Impact, Caning, Tickles, Sensory_Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell, Pain',
+                                'Sexual=Oral_Receiving, Oral_Giving, Fisting, Fingering, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
                                 'Toys=Vibrators, Dildos, Butt Plus',
-                                'Restraint=Rope, Chains, Spreader Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
+                                'Restraint=Rope, Chains, Spreader_Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
                                 'Breath Play=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth, Postural',
                                 'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
                                 'Misc.=Allergies, Lube'
                             ],
+                            defaultGradient: 'Rainbow',
                             logo: 'Logo',
+                            backdrops: ['General', 'Wax', 'Sexual', 'Spanking', 'Sensory', 'Messy'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
                     {
-                        id: 'Persona',
+                        id: 'WellBeing',
+                        definition: {
+                            title: 'Wellbeing',
+                            data: ['Emotional & Mood=Anxiety, Panic_Attacks, Depression, PTSD, Bipolar Disorder, Self-Harm, Intrusive_Thoughts, Insomnia',
+                                'Social & Interaction=Social_Anxiety, Agoraphobia, Selective_Mutism, Speech_Impairment, Tourette_Syndrome',
+                                'Physical Hardship=Hyper_Flexibility, Chronic_Pain, Arthritis, Joint_Problems, Back_Problems, Heart_Problems, Breathing_Problems, Hearing_Problems, Visual_Problems, Other',
+                                'Sensory=Misophonia, Sensory_Processing_Disorder, Phobias',
+                                'Cognitive & Learning=ADHD, Dyslexia, Schizophrenia, Autism_Spectrum_Disorder, OCD, Substance_Use_Disorder',
+                                'Conditions=Other, Migraines, Fibromyalgia, Ehlers_Danlos_Syndrome, IBS, Colitis, Crohns_Disease, Epilepsy_Seizures, Diabetes, Asthma',
+                                'Allergies=Other, Nut, Animal, Pollen, Dust, Food, Medication'
+                            ],
+                            defaultLabels: 'Sufferings',
+                            defaultGradient: 'Green-Red',
+                            logo: 'Logo',
+                            backdrops: ['WellBeing'],
+                            rnd: Math.random(),
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'Person1',
                         definition: {
                             title: 'Persona & Preferences',
                             data: ['Head Space=Pet Play, Age Play',
                                 'Servitude=Service, High Protocol, Worship, Chores, Homework',
-                                'Humiliation=Public Humiliation, Embarrassment, Cuckolding, Chastity, Financial_Domination',
-                                'Persona=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Voyeur, Exhibitionist, Primal',
-                                'Reward & Punishment=Praise, Rewards, Punishments, Contracts, Training, Behavior_Modification',
-                                'Theatrics=Role Play, Scenes',
-                                'Words=Dirty Talk, Verbal_Humiliation, Praise, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/bod'
+                                'Humiliation=Public Humiliation, Embarrassment, Financial_Domination, Cuckolding, Chastity',
+                                'Persona & Power Exchange=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Brat, Exhibitionist, Voyeur, Primal',
+                                'Reward & Punishment=Praise, Rewards, Funishments, Punishments, Contracts, Training, Behavior_Modification',
+                                'Theatrics=Role Play, Scenes, One Night_Stands',
+                                'Words=Dirty Talk, Praise, Verbal_Humiliation, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/boy'
                             ],
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
+                            backdrops: ['Relationship', 'AgePlay', 'RolePlay'],
+                            rnd: Math.random(),
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'TopSpace',
+                        definition: {
+                            title: 'Top Space',
+                            data: ['Im a=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Brat, Voyeur, Exhibitionist, Primal',
+                                'Head Space=Mummy_Daddy, Caregiver, Pet Play, Age Play',
+                                'Dealing In=Praise, Rewards, Funishments, Punishments, Contracts, Behavior_Modification, Training',
+                                'Enforcement=Service, High_Protocol, Worship, Chores, Homework',
+                                'Inflicting=Public_Humiliation, Embarrassment, Chastity, Financial_Domination, Cuckolding',
+                                'Theatrics=Role Play, Scenes, One Night_Stands',
+                                'Saying to you=Dirty Talk, Praise, Commands, Verbal_Humiliation, Storytelling, Girl/Boy',
+                                'Address me=Master_Mistress, Sir_Madam, Daddy_Mummy'
+                            ],
+                            defaultGradient: 'Red-Green',
+                            logo: 'Logo',
+                            backdrops: ['Top', 'Relationship', 'AgePlay', 'RolePlay'],
+                            rnd: Math.random(),
+                            flattenedData: ''
+                        }
+                    },
+                    {
+                        id: 'BottomSpace',
+                        definition: {
+                            title: 'Bottom Space',
+                            data: ['Head Space=Pet Play, Age Play',
+                                'Servitude=Service, High Protocol, Worship, Chores, Homework',
+                                'Humiliation=Public Humiliation, Embarrassment, Financial_Domination, Cuckolding, Chastity',
+                                'Im a=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Brat, Exhibitionist, Voyeur, Primal',
+                                'RReceiving=Praise, Rewards, Funishments, Punishments, Contracts, Training, Behavior_Modification',
+                                'Theatrics=Role Play, Scenes, One Night_Stands',
+                                'Say to me=Dirty Talk, Praise, Verbal_Humiliation, Commands, Storytelling'
+                            ],
+                            defaultGradient: 'Red-Green',
+                            logo: 'Logo',
+                            backdrops: ['Bottom', 'Relationship', 'AgePlay', 'RolePlay'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1607,7 +2405,10 @@
                                 'Where=Private, Public, BDSM_Clubs, CNC',
                                 'Dividend=Sexual Arousal, Partners Experience, Psychological_Satisfaction'
                             ],
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
+                            backdrops: ['Relationship', 'Caged'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     },
@@ -1619,24 +2420,103 @@
                                 'Where=Private, Public, BDSM_Clubs, CNC',
                                 'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional_Release, Endorphin_Junky, Brat, Partners_Experience, Psychological_Satisfaction, Powerlessness, Challenging_Limits'
                             ],
+                            defaultGradient: 'Red-Green',
                             logo: 'Logo',
+                            backdrops: ['Relationship', 'Caged'],
+                            rnd: Math.random(),
                             flattenedData: ''
                         }
                     }
                 ],
 
+                gradients: [
+                    {
+                        id: 'Red-Green',
+                        stops: [
+                            { pos: 0, color: 'rgba(255, 0, 0, 0.68)' },
+                            { pos: 1, color: 'rgba(0, 255, 0, 0.48)' }
+                        ]
+                    },
+                    {
+                        id: 'Green-Red',
+                        stops: [
+                            { pos: 0, color: 'rgba(0, 255, 0, 0.48)' },
+                            { pos: 1, color: 'rgba(255, 0, 0, 0.68)' }
+                        ]
+                    },
+                    {
+                        id: 'Red-Blue',
+                        stops: [
+                            { pos: 0, color: 'rgba(220, 20, 60, 0.48)' },   // Crimson red
+                            { pos: 1, color: 'rgba(65, 105, 225, 0.68)' }   // Royal blue
+                        ]
+                    },
+                    {
+                        id: 'Yellow-Green',
+                        stops: [
+                            { pos: 0, color: 'rgba(255, 215, 0, 0.48)' },   // Forest green
+                            { pos: 1, color: 'rgba(34, 139, 34, 0.68)' }    // Gold/yellow
+                        ]
+                    },
+                    {
+                        id: 'Rainbow',
+                        stops: [
+                            { pos: 0.0, color: 'rgba(255,   0,   0, 0.48)' },   // Red
+                            { pos: 0.16, color: 'rgba(255, 165,   0, 0.51)' },   // Orange
+                            { pos: 0.33, color: 'rgba(255, 255,   0, 0.54)' },   // Yellow
+                            { pos: 0.50, color: 'rgba(0,   128,   0, 0.57)' },   // Green
+                            { pos: 0.66, color: 'rgba(0,     0, 255, 0.60)' },   // Blue
+                            { pos: 0.83, color: 'rgba(75,    0, 244, 0.53)' },   // Indigo
+                            { pos: 1.0, color: 'rgba(238, 130, 238, 0.6)' }    // Violet
+                        ]
+                    },
+                    {
+                        id: 'Rainbow-Pastel',
+                        stops: [
+                            { pos: 0.0, color: 'rgba(255, 179, 186, 0.48)' },  // Pastel Red
+                            { pos: 0.16, color: 'rgba(255, 223, 186, 0.51)' },  // Pastel Orange
+                            { pos: 0.33, color: 'rgba(255, 255, 186, 0.54)' },  // Pastel Yellow
+                            { pos: 0.50, color: 'rgba(186, 255, 201, 0.57)' },  // Pastel Green
+                            { pos: 0.66, color: 'rgba(186, 225, 255, 0.60)' },  // Pastel Blue
+                            { pos: 0.83, color: 'rgba(201, 186, 255, 0.63)' },  // Pastel Indigo
+                            { pos: 1.0, color: 'rgba(255, 186, 255, 0.66)' }   // Pastel Violet
+                        ]
+                    }
+
+                ],
+
+                backdropCounts: [
+                    { id: 'AgePlay', count: 16 },
+                    { id: 'Caged', count: 15 },
+                    { id: 'Dangerous', count: 4 },
+                    { id: 'General', count: 30 },
+                    { id: 'Messy', count: 13 },
+                    { id: 'PlayFighting', count: 36 },
+                    { id: 'Relationship', count: 28 },
+                    { id: 'Reward', count: 18 },
+                    { id: 'RolePlay', count: 40 },
+                    { id: 'Sensory', count: 32 },
+                    { id: 'Sexual', count: 8 },
+                    { id: 'Spanking', count: 13 },
+                    { id: 'Wax', count: 4 },
+                    { id: 'WellBeing', count: 10 },
+                ],
+
                 axisLabels: [
                     { id: 'None', description: '% values', value: '' },
+                    // { id: 'Default', description: 'Default ❓😡😭😢😕🤔🫤😐🙂😃🤩', value: '❓,😡,😭,😢,😕,🤔,🫤,😐,🙂,😃,🤩' },
+                    { id: 'Default', description: 'Default 🤔😡😭😢😕🫤🤷😐🙂😃🤩', value: '🤔,😡,😭,😢,😕,🫤,🤷,😐,🙂,😃,🤩' },
                     { id: 'Affection', description: 'Affection 😠😐🙂😗😚😘', value: '😠,😐,🙂,😗,😚,😘' },
                     { id: 'Bored', description: 'Bored? 😴😐🙂😄😂🤣', value: '😴,😐,🙂,😄,😂,🤣' },
                     { id: 'Cat', description: 'Cat 😿😾😼😺😻', value: '😿,😾,😼,😺,😻' },
                     { id: 'Health', description: 'Health 😵🤮🤢😷🤒🙂😃', value: '😵,🤮,🤢,😷,🤒,🙂,😃' },
                     { id: 'Hearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
-                    { id: 'Light', description: 'Light Level 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
                     { id: 'Medals', description: 'Medals 💩🥉🥈🥇🏆', value: '💩,🥉,🥈,🥇,🏆' },
                     { id: 'Moon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
+                    { id: 'NightDay', description: 'Night & Day 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
                     { id: 'Person', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
                     { id: 'Smiles', description: 'Smiles 😡😭😢😕🫤😐🙂😃🤩', value: '😡,😭,😢,😕,🫤,😐,🙂,😃,🤩' },
+                    { id: 'Sufferings', description: 'Sufferings 🤩😃🙂😐🫤😕😢😭', value: '🤩,😃,🙂,😐,🫤,😕,😢,😭' },
                     { id: 'Temperature', description: 'Temperature ❄️💧🔥', value: '❄️,💧,🔥' },
                     { id: 'Thumbs', description: 'Thumbs 👍👎', value: '👎,👍' },
                     { id: 'TThumbs', description: 'Thoughtful Thumbs 👍🤔👎', value: '👎,🤔,👍' },
@@ -1652,11 +2532,66 @@
 
                 messages: [
                     { id: 'None', value: '' },
-                    { id: 'do', value: 'is\nhappy to do this\nto' },
-                    { id: 'from', value: 'is\nhappy to receive this\nfrom' },
-                    { id: 'tastes', value: 'has\ntastes that they want\nyou to know about' },
-                    { id: 'with', value: 'is\nhappy to do this\nwith' }
+                    { id: 'do', value: 'Person 1 is\nhappy to do this\nto Person 2' },
+                    { id: 'from', value: 'Person 1 is\nhappy to receive this\nfrom Person 2' },
+                    { id: 'tastes', value: 'Person 1 has\ntastes that they want\nPerson 2 to know about' },
+                    { id: 'with', value: 'Person 1 is\nhappy to do this\nwith Person 2' }
                 ]
+            }
+
+            var currentGradient = defaultData.gradients[0];
+
+            // Backdrops are taken as a random image from defined specific types of backdrop
+            // with a stable random number which allows us to re-produce the same random backdrop
+            // if we swap away from the current chart then back again.
+            // We can also purposefully randomize if required.
+            const backdropCounts = new Map(defaultData.backdropCounts.map(({ id, count }) => [id, count]));
+            var currentBackdrop = null;
+            var currentBackdropTypes = null;
+            var currentBackdropOffset = 0;
+            var backdropRnd;
+            randomizeBackdropRnd();
+
+            function RandomBackdrop() {
+                const oldBackdrop = currentBackdrop;
+                var count = 0;
+
+                // Make sure any new backdrop is different to the old one
+                // with an exit point just in case for some reason we can't find a different one after 10 tries
+                while (currentBackdrop === oldBackdrop && count < 10) {
+                    randomizeBackdropRnd();
+                    SetRandomBackdrop(currentBackdropTypes, currentBackdropOffset);
+                    count++;
+                }
+            }
+
+            function randomizeBackdropRnd() {
+                backdropRnd = Math.floor(Math.random() * 999999);
+            }
+
+            function SetRandomBackdrop(types, offset) {
+                if (!Array.isArray(types) || types.length === 0) {
+                    return null;
+                }
+
+                const index = (backdropRnd + offset) % types.length;
+                const value = types[index];
+
+                currentBackdropTypes = types;
+                currentBackdropOffset = offset;
+
+                currentBackdrop = GetBackdropImageUrl(value, offset);
+            }
+
+            function GetBackdropImageUrl(type, offset) {
+                if (backdropCounts.has(type)) {
+                    const count = backdropCounts.get(type);
+                    const index = (backdropRnd + offset) % count;
+
+                    return `backdrops/${type}/${String(index).padStart(3, '0')}.jpg`;
+                }
+
+                return null;
             }
 
             function addPlaceholderOption(select, text = '-- Select a template --') {
@@ -1669,6 +2604,24 @@
             }
 
             // Populate drop downs
+
+            // axis Gradients
+            addPlaceholderOption(ui.gradientDefaults, '-- Select gradient --');
+            defaultData.gradients.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.id;
+                ui.gradientDefaults.appendChild(opt);
+            });
+
+            addPlaceholderOption(ui.gradientQuickPick, '-- Select gradient --');
+            defaultData.gradients.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g.id;
+                opt.textContent = g.id;
+                ui.gradientQuickPick.appendChild(opt);
+            });
+
             addPlaceholderOption(ui.templates);
             defaultData.chartDefinitions.forEach(({ id, definition }) => {
                 const option = document.createElement('option');
@@ -1677,12 +2630,20 @@
                 ui.templates.appendChild(option);
             });
 
-            addPlaceholderOption(ui.axisLabelDefaults);
+            addPlaceholderOption(ui.axisLabelDefaults, '-- Select labels --');
             defaultData.axisLabels.forEach(({ description, value }) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = description;
                 ui.axisLabelDefaults.appendChild(option);
+            });
+
+            addPlaceholderOption(ui.axisLabelQuickPick, '-- Select labels --');
+            defaultData.axisLabels.forEach(({ description, value }) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = description;
+                ui.axisLabelQuickPick.appendChild(option);
             });
 
             addPlaceholderOption(ui.messageTemplates);
@@ -1701,14 +2662,14 @@
 
             function resizeTextarea(textarea) {
                 textarea.style.height = 'auto';
-                
+
                 //requestAnimationFrame(() => {
                 textarea.style.height = textarea.scrollHeight + 'px';
                 //});
             }
 
             // Extra UI stuff
-            function toggleOptions() {
+            function toggleOptions(ctrl) {
                 ui.options.style.display = ui.options.style.display === 'none' ? 'block' : 'none';
                 if (ui.options.style.display === 'block') {
                     resizeTextarea(ui.title);

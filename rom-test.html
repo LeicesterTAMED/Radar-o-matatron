@@ -551,6 +551,8 @@
                 messageTemplates: $('#messageTemplates')
             };
 
+            const defaultAxisLabels = 'Default';
+
             const ctx = ui.canvas.getContext('2d');
 
             // --- Draw lines of text on canvas, down from start point
@@ -1723,7 +1725,7 @@
                 ui.chartData.style.height = ui.chartData.scrollHeight + 'px';
 
                 // Default axis labels
-                const axisLabelSet = defaultData.axisLabels.find(item => item.id === chartDefinition.defaultLabels);
+                const axisLabelSet = defaultData.axisLabels.find(item => item.id === (chartDefinition.defaultLabels ?? defaultAxisLabels));
                 if (axisLabelSet) {
                     ui.axisLabelQuickPick.value = axisLabelSet.value;
                     ui.axisLabels.value = axisLabelSet.value;
@@ -1933,7 +1935,7 @@
                     axisLabels = matchingAxisLabelsDefault.id;
                 // Don't bother with axis labels if we are using the default
                 let encodedAxis;
-                if (axisLabels != 'Smiles')
+                if (axisLabels != defaultAxisLabels)
                     encodedAxis = encodeURIComponent(axisLabels);
 
 
@@ -2026,7 +2028,7 @@
 
                 // Axis
                 if (!axisParam || axisParam.length == 0)
-                    axisParam = defaultData.axisLabels.find(item => item.id === 'Smiles')?.value || '';  // default if nothing specified
+                    axisParam = defaultData.axisLabels.find(item => item.id === defaultAxisLabels)?.value || defaultAxisLabels;  // default if nothing specified
                 else if (!axisParam.includes(',')) {
                     // Axis contains reference to axis definition, unless it contains a comma then we use the string itself as the definition
                     matchedDefault = defaultData.axisLabels.find(item => item.id === axisParam);
@@ -2190,7 +2192,6 @@
                                 'Food=Chinese, Indian, Italian, Mexican, Japanese, Korean, Thai, English, Other',
                                 'Pets=Cats, Dogs, Fish, Birds, Reptiles, Other'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: [],
@@ -2199,19 +2200,18 @@
                         }
                     },
                     {
-                        id: 'PlayFighting101',
+                        id: 'PlayFightingMe',
                         definition: {
-                            title: 'Play Fighting 101',
-                            data: ['Equipment=Rope, Blindfolds, Crops etc.',
-                                'Pleasure=Groping,Sensual_touching_teasing',
-                                'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
-                                'Physical=Biting, Scratching, Bruises, To_Exhaustion',
+                            title: 'Play Fighting\nOn Me',
+                            data: ['Equipment=Rope, Blindfolds, Restraints, Crops etc.',
                                 'Impact=Stingy, Thuddy, Slaps, Spanks',
-                                'Psychological=Degradation, Praise',
+                                'Pleasure=Groping,Sensual_touching_teasing',
+                                'Control me by=Overwhelming_me, Give me_a chance, Hair, Pressure_Points, Pain',
+                                'Physical on me=Biting, Scratching, Bruises, To_Exhaustion',
+                                'Psychological=Praise, Degradation, Smack Talk',
                                 'Dangerous=Chokes and_Strangles, Breath Play',
-                                'My Health=General Physical, General Mental, Fitness, Stamina'
+                                'My Health=General_Physical, General_Mental, Fitness, Stamina'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'PlayFighting',
                             backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
@@ -2220,19 +2220,18 @@
                         }
                     },
                     {
-                        id: 'PlayFighting',
+                        id: 'PlayFightingYou',
                         definition: {
-                            title: 'Play Fighting',
-                            data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops_Floggers_etc.',
-                                'Pleasure=Groping,Sensual_touching_teasing, Sex toys_external, Sex toys_internal',
-                                'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
-                                'Physical Harm=Biting, Scratching, Bruises',
-                                'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
-                                'Psychological=Degradation, Praise',
+                            title: 'Play Fighting\nOn You',
+                            data: ['Equipment=Rope, Blindfolds, Restraints, Crops etc.',
+                                'Impact=Slaps, Spanks',
+                                'Pleasure=Groping,Sensual_touching_teasing',
+                                'Control you with=Overwhelm_you, Give you_a chance, Hair, Pressure_Points, Pain',
+                                'Physical on you=Biting, Scratching, Bruises, To_Exhaustion',
+                                'Psychological=Praise, Degradation, Smack Talk',
                                 'Dangerous=Chokes and_Strangles, Breath Play',
-                                'My Health=General Physical, General Mental, Fitness, Stamina'
+                                'My Health=General_Physical, General_Mental, Fitness, Stamina'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'PlayFighting',
                             backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
@@ -2240,6 +2239,26 @@
                             flattenedData: ''
                         }
                     },
+                    // {
+                    //     id: 'PlayFighting',
+                    //     definition: {
+                    //         title: 'Play Fighting',
+                    //         data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops_Floggers_etc.',
+                    //             'Pleasure=Groping,Sensual_touching_teasing, Sex toys_external, Sex toys_internal',
+                    //             'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
+                    //             'Physical Harm=Biting, Scratching, Bruises',
+                    //             'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
+                    //             'Psychological=Degradation, Praise',
+                    //             'Dangerous=Chokes and_Strangles, Breath Play',
+                    //             'My Health=General Physical, General Mental, Fitness, Stamina'
+                    //         ],
+                    //         defaultGradient: 'Red-Green',
+                    //         logo: 'PlayFighting',
+                    //         backdrops: ['PlayFighting', 'Reward', 'Dangerous'],
+                    //         rnd: Math.random(),
+                    //         flattenedData: ''
+                    //     }
+                    // },
                     {
                         id: 'GeneralInterestMe',
                         definition: {
@@ -2253,7 +2272,6 @@
                                 'Stuff on me=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'You can touch my=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['General', 'Sexual', 'Spanking', 'Sensory'],
@@ -2274,7 +2292,6 @@
                                 'Stuff on you=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'Want to touch your=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['General', 'Sexual', 'Spanking', 'Sensory'],
@@ -2295,7 +2312,6 @@
                                 'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
                                 'Misc.=Allergies, Lube'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Rainbow',
                             logo: 'Logo',
                             backdrops: ['General', 'Wax', 'Sexual', 'Spanking', 'Sensory', 'Messy'],
@@ -2335,7 +2351,6 @@
                                 'Theatrics=Role Play, Scenes, One Night_Stands',
                                 'Words=Dirty Talk, Praise, Verbal_Humiliation, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/boy'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Relationship', 'AgePlay', 'RolePlay'],
@@ -2356,7 +2371,6 @@
                                 'Saying to you=Dirty Talk, Praise, Commands, Verbal_Humiliation, Storytelling, Girl/Boy',
                                 'Address me=Master_Mistress, Sir_Madam, Daddy_Mummy'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Top', 'Relationship', 'AgePlay', 'RolePlay'],
@@ -2376,7 +2390,6 @@
                                 'Theatrics=Role Play, Scenes, One Night_Stands',
                                 'Say to me=Dirty Talk, Praise, Verbal_Humiliation, Commands, Storytelling'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Bottom', 'Relationship', 'AgePlay', 'RolePlay'],
@@ -2392,7 +2405,6 @@
                                 'Where=Private, Public, BDSM_Clubs, CNC',
                                 'Dividend=Sexual Arousal, Partners Experience, Psychological_Satisfaction'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Relationship', 'Caged'],
@@ -2408,7 +2420,6 @@
                                 'Where=Private, Public, BDSM_Clubs, CNC',
                                 'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional_Release, Endorphin_Junky, Brat, Partners_Experience, Psychological_Satisfaction, Powerlessness, Challenging_Limits'
                             ],
-                            defaultLabels: 'Smiles',
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
                             backdrops: ['Relationship', 'Caged'],
@@ -2493,14 +2504,16 @@
 
                 axisLabels: [
                     { id: 'None', description: '% values', value: '' },
+                    // { id: 'Default', description: 'Default ❓😡😭😢😕🤔🫤😐🙂😃🤩', value: '❓,😡,😭,😢,😕,🤔,🫤,😐,🙂,😃,🤩' },
+                    { id: 'Default', description: 'Default 🤔😡😭😢😕🫤🤷😐🙂😃🤩', value: '🤔,😡,😭,😢,😕,🫤,🤷,😐,🙂,😃,🤩' },
                     { id: 'Affection', description: 'Affection 😠😐🙂😗😚😘', value: '😠,😐,🙂,😗,😚,😘' },
                     { id: 'Bored', description: 'Bored? 😴😐🙂😄😂🤣', value: '😴,😐,🙂,😄,😂,🤣' },
                     { id: 'Cat', description: 'Cat 😿😾😼😺😻', value: '😿,😾,😼,😺,😻' },
                     { id: 'Health', description: 'Health 😵🤮🤢😷🤒🙂😃', value: '😵,🤮,🤢,😷,🤒,🙂,😃' },
                     { id: 'Hearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
-                    { id: 'Light', description: 'Light Level 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
                     { id: 'Medals', description: 'Medals 💩🥉🥈🥇🏆', value: '💩,🥉,🥈,🥇,🏆' },
                     { id: 'Moon', description: 'Moon Phases 🌑🌘🌗🌖🌕', value: '🌑,🌘,🌗,🌖,🌕' },
+                    { id: 'NightDay', description: 'Night & Day 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
                     { id: 'Person', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
                     { id: 'Smiles', description: 'Smiles 😡😭😢😕🫤😐🙂😃🤩', value: '😡,😭,😢,😕,🫤,😐,🙂,😃,🤩' },
                     { id: 'Sufferings', description: 'Sufferings 🤩😃🙂😐🫤😕😢😭', value: '🤩,😃,🙂,😐,🫤,😕,😢,😭' },
