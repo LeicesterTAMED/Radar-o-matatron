@@ -3,11 +3,11 @@ Radar charts with extra spice!
 
 ⚠️ Consent & Preference Mapping Disclaimer
 
-This project contains personal preference charts and consent-level visualizations intended to support self-expression, communication, and boundary-setting across a range of topics.
+This project contains personal preference charts and consent-demonstrating visualizations intended to support tastes, wants, self-expression, communication, and boundary-setting across a range of topics.
 
 🧠 Purpose & Intent
 - Designed to help individuals articulate their interests, boundaries, and comfort zones in a clear, visual format.
-- Intended for use in mutual understanding, negotiation, and respectful dialogue — not for judgment or pressure.
+- Intended for use in mutual understanding, negotiation, and respectful dialogue — not for judgement or pressure.
 - Encourages informed, consensual engagement in any context where preferences matter.
   
 🔍 Content Overview
@@ -21,7 +21,7 @@ This project contains personal preference charts and consent-level visualization
   
 📜 Ethics & Compliance
 - This project aligns with GitHub’s Community Guidelines https://docs.github.com/en/site-policy/github-terms/github-community-guidelines.
-- No content promotes harm, coercion, or non-consensual behavior.
+- No content promotes harm, coercion, or non-consensual behaviors.
 - Contributors are expected to uphold ethical standards, privacy, and respect for autonomy.
 
 ## To Do

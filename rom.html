@@ -363,7 +363,7 @@
 
         <div class="panel">
             <div class="row">
-                <button id="toggleOptions">⚙️ Toggle chart configuration options</button>
+                <button id="toggleOptions">⚙️ Show chart configuration options</button>
             </div>
             <div id="options" style="margin-top: 6px; display: none">
                 <div class="row">
@@ -430,7 +430,7 @@
 
         <div class="panel">
             <div class="row">
-                <button id="toggleDisclaimer">ℹ️ Toggle Disclaimer</button>
+                <button id="toggleDisclaimer">ℹ️ Show Disclaimer</button>
             </div>
             <div id="disclaimer" style="margin-top: 6px; display: none">
                 <p>This software and its contents are provided "as is", without warranty of any kind, express or
@@ -438,27 +438,27 @@
                 </p>
 
                 <p>These charts are not meant to be a definitive comprehensive analysis of any individual's preferences
-                    or person1lity. They are intended for entertainment and illustrative purposes only.</p>
+                    or personality. They are intended for entertainment and illustrative purposes only.</p>
 
                 <p>We recommend you use these charts as a start of a conversation, to indicate areas for exploration,
                     and to help
                     identify potential compatibilities or incompatibilities between partners.</p>
 
                 <p>You are welcome to use charts you create for yourself however you want, but please do not share or
-                    distribute charts that include person1l information about others without their explicit consent.
-                    We ask if you can please keep any branding or logos within the chart images to help us spread the
-                    good word of their existence.
+                    distribute charts that include personal information about others without their explicit consent.
+                    We ask if you can please keep any branding/logos included within the chart images to help us spread
+                    the
+                    good word.
                 <p>
 
                 <p>Chart definitions, design, visuals and functionality may change any any time and without warning as
-                    we
-                    further develop and refine the system.
+                    we further develop and refine them.
                 <p>
 
                 <p>By using this software, you agree to do so responsibly and ethically, respecting the privacy and
                     autonomy of all individuals involved.</p>
 
-                <p>Always seek informed consent before sharing or discussing any person1l information.</p>
+                <p>Always seek informed consent before sharing or discussing any personal information.</p>
 
                 <p>By accessing or using this system, you agree to these terms.</p>
 
@@ -1257,7 +1257,7 @@
 
 
 
-                        const radialWidth = itemAngleStepSize* .4;
+                        const radialWidth = itemAngleStepSize * .4;
 
                         ctx.beginPath();
 
@@ -1273,7 +1273,7 @@
                             const yBefore = Math.sin(a - radialWidth) * rSidePoints;
 
                             //const xMain = Math.cos(a) * rMain;
-                           // const yMain = Math.sin(a) * rMain;
+                            // const yMain = Math.sin(a) * rMain;
 
                             const xAfter = Math.cos(a + radialWidth) * rSidePoints;
                             const yAfter = Math.sin(a + radialWidth) * rSidePoints;
@@ -1674,8 +1674,15 @@
             ui.person2.addEventListener('change', debounce(draw, 100));
             ui.chartLogo.addEventListener('load', draw); // --- Redraw on image load (so appears in chart, will be missing at start)
             ui.toggleOptions.addEventListener('click', toggleOptions);
-            ui.toggleDisclaimer.addEventListener('click', function () { ui.disclaimer.style.display = ui.disclaimer.style.display === 'none' ? 'block' : 'none'; });
-
+            ui.toggleDisclaimer.addEventListener('click', function () {
+                if (ui.disclaimer.style.display === 'none') {
+                    ui.disclaimer.style.display = 'block';
+                    ui.toggleDisclaimer.innerHTML = "ℹ️ Hide Disclaimer";
+                } else {
+                    ui.disclaimer.style.display = 'none';
+                    ui.toggleDisclaimer.innerHTML = "ℹ️ Show Disclaimer";
+                }
+            });
             // Auto sizing textareas
             document.querySelectorAll('textarea').forEach(textarea => {
                 textarea.addEventListener('input', () => {
@@ -2206,7 +2213,7 @@
                             data: ['Equipment=Rope, Blindfolds, Restraints, Crops etc.',
                                 'Impact=Stingy, Thuddy, Slaps, Spanks',
                                 'Pleasure=Groping,Sensual_touching_teasing',
-                                'Control=Overwhelm, Give a_chance, Hair, Pressure_Points, Pain',
+                                'Control=Hair, Overwhelm, Give a_chance, Pressure_Points, Pain',
                                 'Physical=Biting, Scratching, Bruises, To_Exhaustion',
                                 'Psychological=Praise, Degradation, Smack Talk',
                                 'Dangerous=Chokes and_Strangles, Breath Play',
@@ -2225,12 +2232,12 @@
                             title: 'Play Fighting',
                             data: ['Equipment=Rope, Blindfolds, Hoods, Gags, Crops_Floggers_etc.',
                                 'Pleasure=Groping,Sensual_touching_teasing, Sex toys_external, Sex toys_internal',
-                                'Control=Being_overwhelmed, Being given_a chance,Restraints, Hair, Pressure_Points, Pain',
+                                'Control=Hair, Restraints, Being_overwhelmed, Being given_a chance, Pressure_Points, Pain',
                                 'Physical Harm=Biting, Scratching, Bruises, To_Exhaustion',
                                 'Impact=Stingy, Thuddy, Face Slaps, Punches, Kicks, Spanks',
                                 'Psychological=Degradation, Praise, Smack Talk',
                                 'Dangerous=Chokes and_Strangles, Breath Play',
-                                'My Health=General Physical, General Mental, Fitness, Stamina'
+                                'My Health=General_Physical, General_Mental, Fitness, Stamina'
                             ],
                             defaultGradient: 'Red-Green',
                             logo: 'PlayFighting',
@@ -2286,7 +2293,7 @@
                             data: ['Sensory=Impact, Caning, Tickles, Sensory_Deprivation, Electro, Hypno, Needles, Sploshing, Temperature, Wax, Sound, Smell, Pain',
                                 'Sexual=Oral_Receiving, Oral_Giving, Fisting, Fingering, Penetrative_Sex, Boob Job, Anal, Rimming, Orgasm Denial, Forced Orgasms',
                                 'Toys=Vibrators, Dildos, Butt Plus',
-                                'Restraint=Rope, Chains, Spreader_Bars, Soft Cuffs, Metal Cuffs, Tape, Gags, Blindfolds, Hoods',
+                                'Restraint=Rope, Chains, Spreader_Bars, Metal Cuffs, Soft Cuffs, Tape, Gags, Blindfolds, Hoods',
                                 'Breath Play=Chocking, Strangling, Smothering, Hand over_Nose, Hand over_Mouth, Postural',
                                 'Body Fluids=Cum, Spit, Blood, Urine, Scat, Vomit',
                                 'OK To Touch=Genitals, Anus, Breasts, Nipples, Throat, Hair, Legs, Feet, Face, Ears, Mouth, Other',
@@ -2303,8 +2310,8 @@
                         id: 'WellBeing',
                         definition: {
                             title: 'Wellbeing',
-                            data: ['Emotional & Mood=Anxiety, Panic_Attacks, Depression, PTSD, Bipolar Disorder, Self-Harm, Intrusive_Thoughts, Insomnia',
-                                'Social & Interaction=Social_Anxiety, Agoraphobia, Selective_Mutism, Speech_Impairment, Tourette_Syndrome',
+                            data: ['Emotional & Mood=Anxiety, Panic_Attacks, Depression, PTSD, Bipolar_Disorder, Self-Harm, Intrusive_Thoughts, Insomnia',
+                                'Social & Interaction=Social_Anxiety, Agoraphobia, Speech_Impairment, Selective_Mutism, Tourette_Syndrome',
                                 'Physical Hardship=Hyper_Flexibility, Chronic_Pain, Arthritis, Joint_Problems, Back_Problems, Heart_Problems, Breathing_Problems, Hearing_Problems, Visual_Problems, Other',
                                 'Sensory=Misophonia, Sensory_Processing_Disorder, Phobias',
                                 'Cognitive & Learning=ADHD, Dyslexia, Schizophrenia, Autism_Spectrum_Disorder, OCD, Substance_Use_Disorder',
@@ -2326,10 +2333,10 @@
                             data: ['Head Space=Pet Play, Age Play',
                                 'Servitude=Service, High Protocol, Worship, Chores, Homework',
                                 'Humiliation=Public Humiliation, Embarrassment, Financial_Domination, Cuckolding, Chastity',
-                                'Persona & Power Exchange=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Brat, Exhibitionist, Voyeur, Primal',
-                                'Reward & Punishment=Praise, Rewards, Funishments, Punishments, Contracts, Training, Behavior_Modification',
+                                'Persona & Power Exchange=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Exhibitionist, Switch, Brat, Voyeur, Primal',
+                                'Reward & Punishment=Praise, Rewards, Funishments, Punishments, Behavior_Modification, Contracts, Training',
                                 'Theatrics=Role Play, Scenes, One Night_Stands',
-                                'Words=Dirty Talk, Praise, Verbal_Humiliation, Commands, Storytelling, Master, Mistress, Sir, Daddy, Toy, girl/boy'
+                                'Words=Master_Mistress, Sir_Madam, Daddy_Mummy, Toy, Girl/Boy, Dirty Talk, Commands, Verbal_Humiliation, Praise, Storytelling'
                             ],
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
@@ -2342,14 +2349,16 @@
                         id: 'TopSpace',
                         definition: {
                             title: 'Top Space',
-                            data: ['Im a=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Brat, Voyeur, Exhibitionist, Primal',
-                                'Head Space=Mummy_Daddy, Caregiver, Pet Play, Age Play',
+                            data: [
+                                'Im a=Dominant, Submissive, Top, Bottom, Switch, Sadist, Masochist, Brat, Voyeur, Exhibitionist, Primal',
                                 'Dealing In=Praise, Rewards, Funishments, Punishments, Contracts, Behavior_Modification, Training',
-                                'Enforcement=Service, High_Protocol, Worship, Chores, Homework',
+                                'Enforcement=Service, High_Protocol, Worship, Homework, Chores',
                                 'Inflicting=Public_Humiliation, Embarrassment, Chastity, Financial_Domination, Cuckolding',
                                 'Theatrics=Role Play, Scenes, One Night_Stands',
-                                'Saying to you=Dirty Talk, Praise, Commands, Verbal_Humiliation, Storytelling, Girl/Boy',
-                                'Address me=Master_Mistress, Sir_Madam, Daddy_Mummy'
+                                'Saying to you=Commands, Verbal_Humiliation, Praise, Dirty Talk, Storytelling, Girl/Boy',
+                                'Address me=Master_Mistress, Sir_Madam, Daddy_Mummy',
+                                'Head Space=Mummy_Daddy, Caregiver, Pet Play, Age Play'
+                                
                             ],
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
@@ -2362,13 +2371,14 @@
                         id: 'BottomSpace',
                         definition: {
                             title: 'Bottom Space',
-                            data: ['Head Space=Pet Play, Age Play',
+                            data: [
+                                'Im a=Dominant, Submissive, Top, Bottom, Switch, Sadist, Masochist, Brat, Exhibitionist, Voyeur, Primal',
                                 'Servitude=Service, High Protocol, Worship, Chores, Homework',
-                                'Humiliation=Public Humiliation, Embarrassment, Financial_Domination, Cuckolding, Chastity',
-                                'Im a=Masochist, Sadist, Dominant, Submissive, Top, Bottom, Switch, Brat, Exhibitionist, Voyeur, Primal',
-                                'RReceiving=Praise, Rewards, Funishments, Punishments, Contracts, Training, Behavior_Modification',
+                                'Humiliation=Embarrassment, Public_Humiliation, Cuckolding, Chastity, Financial_Domination',
+                                'Receiving=Praise, Rewards, Funishments, Punishments, Contracts, Training, Behavior_Modification',
                                 'Theatrics=Role Play, Scenes, One Night_Stands',
-                                'Say to me=Dirty Talk, Praise, Verbal_Humiliation, Commands, Storytelling'
+                                'Say to me=Dirty Talk, Praise, Verbal_Humiliation, Commands, Storytelling',
+                                'Head Space=Pet Play, Age Play'
                             ],
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
@@ -2381,9 +2391,10 @@
                         id: 'Sadist',
                         definition: {
                             title: 'Sadist',
-                            data: ['Causing=Restraint, Physical pain, Impact pain, Psychological_manipulation, Humiliation, Degradation, Sensory_Denial, Sensory_Overload, Control, Reaction, Role Play',
+                            data: [
+                                'Causing=Restraint, Physical_pain, Impact pain, Psychological_manipulation, Sensory_Denial, Control, Reaction, Humiliation, Degradation, Role_Play, Sensory_Overload,',
                                 'Where=Private, Public, BDSM_Clubs, CNC',
-                                'Dividend=Sexual Arousal, Partners Experience, Psychological_Satisfaction'
+                                'Dividend=Sexual_Arousal, Partners_Experience, Psychological_Satisfaction'
                             ],
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
@@ -2396,9 +2407,10 @@
                         id: 'Masochist',
                         definition: {
                             title: 'Masochist',
-                            data: ['Receiving=Restraint, Physical pain, Impact pain, Psychological_manipulation, Humiliation, Degradation, Sensory_Denial, Sensory_Overload, Control, Reaction, Role Play',
+                            data: [
+                                'Receiving=Restraint, Physical_pain, Impact pain, Psychological_manipulation, Sensory_Denial, Control, Reaction, Humiliation, Degradation, Role_Play, Sensory_Overload',
                                 'Where=Private, Public, BDSM_Clubs, CNC',
-                                'Dividend=Sexual Arousal, Spiritual Catharsis, Emotional_Release, Endorphin_Junky, Brat, Partners_Experience, Psychological_Satisfaction, Powerlessness, Challenging_Limits'
+                                'Dividend=Sexual_Arousal, Spiritual_Catharsis, Emotional_Release, Endorphin_Junky, Challenging_Limits, Bratting, Partners_Experience, Psychological_Satisfaction, Powerlessness'
                             ],
                             defaultGradient: 'Red-Green',
                             logo: 'Logo',
@@ -2472,7 +2484,7 @@
                     { id: 'General', count: 30 },
                     { id: 'Messy', count: 13 },
                     { id: 'PlayFighting', count: 36 },
-                    { id: 'Relationship', count: 28 },
+                    { id: 'Relationship', count: 14 },
                     { id: 'Reward', count: 18 },
                     { id: 'RolePlay', count: 40 },
                     { id: 'Sensory', count: 32 },
@@ -2486,9 +2498,11 @@
                     { id: 'None', description: '% values', value: '' },
                     // { id: 'Default', description: 'Default ❓😡😭😢😕🤔🫤😐🙂😃🤩', value: '❓,😡,😭,😢,😕,🤔,🫤,😐,🙂,😃,🤩' },
                     { id: 'Default', description: 'Default 🤔😡😭😢😕🫤🤷😐🙂😃🤩', value: '🤔,😡,😭,😢,😕,🫤,🤷,😐,🙂,😃,🤩' },
+                    { id: 'Basic', description: 'Default - ❌😭😢😕🫤😐🤔🙂😃🤩', value: '❌,😭,😢,😕,🫤,😐,🤔,🙂,😃,🤩' },
                     { id: 'Affection', description: 'Affection 😠😐🙂😗😚😘', value: '😠,😐,🙂,😗,😚,😘' },
                     { id: 'Bored', description: 'Bored? 😴😐🙂😄😂🤣', value: '😴,😐,🙂,😄,😂,🤣' },
                     { id: 'Cat', description: 'Cat 😿😾😼😺😻', value: '😿,😾,😼,😺,😻' },
+                    { id: 'Engagement', description: 'Engagement 😴🥱😐🙂😃', value: '😴,🥱,😐,🙂,😃' },
                     { id: 'Health', description: 'Health 😵🤮🤢😷🤒🙂😃', value: '😵,🤮,🤢,😷,🤒,🙂,😃' },
                     { id: 'Hearts', description: 'Hearts 💔❤️💖', value: '💔,❤️,💖' },
                     { id: 'Medals', description: 'Medals 💩🥉🥈🥇🏆', value: '💩,🥉,🥈,🥇,🏆' },
@@ -2496,7 +2510,7 @@
                     { id: 'NightDay', description: 'Night & Day 🌌🌃🌆🌇🌅☀️', value: '🌌,🌃,🌆,🌇,🌅,☀️' },
                     { id: 'Person', description: 'Person 🙅🙍🤷🙆', value: '🙅,🙍,🤷,🙆' },
                     { id: 'Smiles', description: 'Smiles 😡😭😢😕🫤😐🙂😃🤩', value: '😡,😭,😢,😕,🫤,😐,🙂,😃,🤩' },
-                    { id: 'Sufferings', description: 'Sufferings 🤩😃🙂😐🫤😕😢😭', value: '🤩,😃,🙂,😐,🫤,😕,😢,😭' },
+                    { id: 'Sufferings', description: 'Sufferings - 👍😐🫤😕😢😭', value: '👍,😐,🫤,😕,😢,😭' },
                     { id: 'Temperature', description: 'Temperature ❄️💧🔥', value: '❄️,💧,🔥' },
                     { id: 'Thumbs', description: 'Thumbs 👍👎', value: '👎,👍' },
                     { id: 'TThumbs', description: 'Thoughtful Thumbs 👍🤔👎', value: '👎,🤔,👍' },
@@ -2505,7 +2519,7 @@
                     { id: 'Weather', description: 'Weather ⛈️🌧️🌦️☁️🌥️🌤️☀️', value: '⛈️,🌧️,🌦️,☁️,🌥️,🌤️,☀️' },
                     { id: '10s', description: '10s %', value: '0%,10%,20%,30%,40%,50%,60%,70%,80%,90%,100%' },
                     { id: '20s', description: '20s %', value: '0%,20%,40%,60%,80%,100%' },
-                    { id: '50s', description: '30s %', value: '0%,50%,100%' },
+                    { id: '50s', description: '50s %', value: '0%,50%,100%' },
                     { id: 'YN', description: 'Yes & No', value: 'No,Yes' },
                     { id: 'TF', description: 'True & False', value: 'False,True' }
                 ],
@@ -2654,6 +2668,10 @@
                 if (ui.options.style.display === 'block') {
                     resizeTextarea(ui.title);
                     resizeTextarea(ui.chartData);
+                    ui.toggleOptions.innerHTML = "⚙️ Hide chart configuration options";
+                }
+                else {
+                    ui.toggleOptions.innerHTML = "⚙️ Show chart configuration options";
                 }
             }
         })();
